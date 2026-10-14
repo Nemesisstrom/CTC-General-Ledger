@@ -70,7 +70,7 @@ class RolePermissionSeeder extends Seeder
         // Buat Admin
         $admin = User::create([
             'name'        => 'Administrator',
-            'email'       => 'admin@perusahaan.com',
+            'email'       => 'admin@keuangan.com',
             'password'    => Hash::make('admin123'),
             'role'        => 'admin', // Isi kolom Enum
             'base_salary' => 10000000,
@@ -80,7 +80,7 @@ class RolePermissionSeeder extends Seeder
         // Buat Akuntan
         $akuntan = User::create([
             'name'        => 'Akuntan Utama',
-            'email'       => 'akuntan@perusahaan.com',
+            'email'       => 'akuntan@keuangan.com',
             'password'    => Hash::make('akuntan123'),
             'role'        => 'akuntan', // Isi kolom Enum
             'base_salary' => 8000000,

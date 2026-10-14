@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreCashTransactionRequest;
 use App\Models\CashTransaction;
+use App\Models\ChartOfAccount;
 use App\Models\Journal;
 use App\Models\JournalDetail;
 use Illuminate\Http\Request;
@@ -10,54 +12,107 @@ use Illuminate\Support\Facades\DB;
 
 class CashTransactionController extends Controller
 {
-    public function store(Request $request)
+    public function index(Request $request)
     {
-        $request->validate([
-            'transaction_date' => 'required|date',
-            'type' => 'required|in:in,out',
-            'account_id' => 'required|exists:chart_of_accounts,id', // Akun Kas/Bank
-            'opposite_account_id' => 'required|exists:chart_of_accounts,id', // Akun Lawan
-            'amount' => 'required|numeric|min:1',
-            'description' => 'nullable|string'
-        ]);
+        $transactions = CashTransaction::with(['account', 'oppositeAccount', 'creator'])
+            ->orderBy('transaction_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->paginate(15);
 
+        // Akun untuk Dropdown Kas & Bank (Asset)
+        $cashAccounts = ChartOfAccount::where('type', 'asset')
+            ->where('is_active', true)
+            ->get();
+
+        // Akun Lawan
+        $allAccounts = ChartOfAccount::where('is_active', true)->get();
+
+        if ($request->wantsJson()) {
+            return response()->json(['data' => $transactions]);
+        }
+
+        return view('admin.cash.index', compact('transactions', 'cashAccounts', 'allAccounts'));
+    }
+
+    public function store(StoreCashTransactionRequest $request)
+    {
         DB::beginTransaction();
         try {
-            // 1. Simpan Transaksi Kas
+            // 1. Generate Nomor Transaksi Unik
+            $prefix = $request->type === 'in' ? 'TRX-IN-' : 'TRX-OUT-';
+            $transactionNumber = $prefix . date('Ym') . '-' . sprintf('%04d', CashTransaction::count() + 1);
+
+            // 2. Simpan Transaksi Kas
             $trx = CashTransaction::create([
-                'transaction_number' => 'TRX-' . time(),
-                'transaction_date' => $request->transaction_date,
-                'type' => $request->type,
-                'account_id' => $request->account_id,
-                'amount' => $request->amount,
-                'description' => $request->description,
-                'created_by' => auth()->id()
+                'transaction_number'  => $transactionNumber,
+                'transaction_date'    => $request->transaction_date,
+                'type'                => $request->type,
+                'account_id'          => $request->account_id,
+                'opposite_account_id' => $request->opposite_account_id,
+                'amount'              => $request->amount,
+                'description'         => $request->description,
+                'created_by'          => auth()->id(),
             ]);
 
-            // 2. Auto Post Jurnal Umum
+            // 3. Auto-Posting ke Jurnal Umum (Integrasi Modul Keuangan)
             $journal = Journal::create([
-                'journal_number' => 'JRN-TRX-' . $trx->id,
-                'journal_date' => $request->transaction_date,
-                'description' => 'Auto Transaction: ' . $request->description,
-                'status' => 'posted',
-                'created_by' => auth()->id()
+                'journal_number'   => 'JRN-' . $transactionNumber,
+                'journal_date'     => $request->transaction_date,
+                'reference_number' => $transactionNumber,
+                'description'      => ($request->type === 'in' ? '[Kas Masuk] ' : '[Kas Keluar] ') . ($request->description ?? 'Transaksi Kas'),
+                'status'           => 'posted',
+                'created_by'       => auth()->id(),
             ]);
 
             if ($request->type === 'in') {
-                // Kas Masuk: Kas (Debit), Opp_Account (Kredit)
-                JournalDetail::create(['journal_id' => $journal->id, 'account_id' => $request->account_id, 'debit' => $request->amount, 'credit' => 0]);
-                JournalDetail::create(['journal_id' => $journal->id, 'account_id' => $request->opposite_account_id, 'debit' => 0, 'credit' => $request->amount]);
+                // Kas Masuk: Kas/Bank (Debit), Akun Lawan (Kredit)
+                JournalDetail::create([
+                    'journal_id' => $journal->id,
+                    'account_id' => $request->account_id,
+                    'debit'      => $request->amount,
+                    'credit'     => 0,
+                    'memo'       => 'Pemasukan Kas/Bank',
+                ]);
+                JournalDetail::create([
+                    'journal_id' => $journal->id,
+                    'account_id' => $request->opposite_account_id,
+                    'debit'      => 0,
+                    'credit'     => $request->amount,
+                    'memo'       => 'Penerimaan dari ' . $trx->oppositeAccount->name,
+                ]);
             } else {
-                // Kas Keluar: Opp_Account (Debit), Kas (Kredit)
-                JournalDetail::create(['journal_id' => $journal->id, 'account_id' => $request->opposite_account_id, 'debit' => $request->amount, 'credit' => 0]);
-                JournalDetail::create(['journal_id' => $journal->id, 'account_id' => $request->account_id, 'debit' => 0, 'credit' => $request->amount]);
+                // Kas Keluar: Akun Lawan (Debit), Kas/Bank (Kredit)
+                JournalDetail::create([
+                    'journal_id' => $journal->id,
+                    'account_id' => $request->opposite_account_id,
+                    'debit'      => $request->amount,
+                    'credit'     => 0,
+                    'memo'       => 'Pengeluaran untuk ' . $trx->oppositeAccount->name,
+                ]);
+                JournalDetail::create([
+                    'journal_id' => $journal->id,
+                    'account_id' => $request->account_id,
+                    'debit'      => 0,
+                    'credit'     => $request->amount,
+                    'memo'       => 'Pengeluaran Kas/Bank',
+                ]);
             }
 
             DB::commit();
-            return response()->json(['message' => 'Transaksi kas berhasil disimpan & di-jurnal', 'data' => $trx]);
+
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Transaksi kas berhasil disimpan & di-jurnal', 'data' => $trx], 201);
+            }
+
+            return redirect()->route('cash-transactions.index')->with('success', 'Transaksi kas berhasil dicatat dan diposting ke jurnal.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => $e->getMessage()], 500);
+
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Gagal memproses transaksi: ' . $e->getMessage()], 500);
+            }
+
+            return redirect()->back()->with('error', 'Gagal memproses transaksi: ' . $e->getMessage())->withInput();
         }
     }
 }

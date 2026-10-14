@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -26,7 +27,10 @@ class AuthController extends Controller
 
     public function loginWeb(LoginRequest $request)
     {
-        if (Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
+        // Gunakan $request->validated() atau $request->only()
+        $credentials = $request->validated();
+
+        if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
             return redirect()->intended('/dashboard')->with('success', 'Selamat datang kembali!');
         }
@@ -38,6 +42,7 @@ class AuthController extends Controller
 
     public function registerWeb(RegisterRequest $request)
     {
+        // 1. Buat User Baru
         $user = User::create([
             'name'        => $request->name,
             'email'       => $request->email,
@@ -46,11 +51,19 @@ class AuthController extends Controller
             'base_salary' => $request->base_salary ?? 0,
         ]);
 
+        // 2. Assign Role Spatie
         $user->assignRole($request->role);
+
+        // 3. Trigger event pengiriman email verifikasi
+        event(new Registered($user));
+
+        // 4. Otomatis Login User & Regenerasi Session
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('dashboard')->with('success', 'Registrasi berhasil!');
+        // 5. Redirect ke Halaman Pemberitahuan Verifikasi Email
+        return redirect()->route('verification.notice')
+            ->with('success', 'Registrasi berhasil! Silakan cek email Anda untuk verifikasi akun.');
     }
 
     public function logoutWeb(Request $request)
@@ -65,9 +78,11 @@ class AuthController extends Controller
     // --- API METHODS ---
     public function loginApi(LoginRequest $request)
     {
-        $user = User::where('email', $request->email)->first();
+        $validated = $request->validated();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        $user = User::where('email', $validated['email'])->first();
+
+        if (!$user || !Hash::check($validated['password'], $user->password)) {
             return response()->json(['message' => 'Email atau password salah'], 401);
         }
 
@@ -81,7 +96,7 @@ class AuthController extends Controller
                 'id'          => $user->id,
                 'name'        => $user->name,
                 'email'       => $user->email,
-                'role'        => $user->role,
+                'role'        => $user->getRoleNames()->first() ?? null,
                 'permissions' => $user->getAllPermissions()->pluck('name'),
             ]
         ]);
@@ -98,9 +113,14 @@ class AuthController extends Controller
         ]);
 
         $user->assignRole($request->role);
+
+        // Send Email Verification via API
+        event(new Registered($user));
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
+            'message'      => 'Registrasi berhasil. Silakan cek email untuk verifikasi.',
             'access_token' => $token,
             'token_type'   => 'Bearer',
             'user'         => $user

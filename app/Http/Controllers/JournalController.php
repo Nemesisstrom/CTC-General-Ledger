@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreJournalRequest;
+use App\Models\ChartOfAccount;
 use App\Models\Journal;
 use App\Models\JournalDetail;
 use Illuminate\Http\Request;
@@ -9,96 +11,125 @@ use Illuminate\Support\Facades\DB;
 
 class JournalController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Journal::with('details.account')->orderBy('journal_date', 'desc')->get());
-    }
+        $journals = Journal::with(['details.account', 'creator'])
+            ->orderBy('journal_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->paginate(15);
 
-    public function store(Request $request)
-    {
-        $request->validate([
-            'journal_date' => 'required|date',
-            'description' => 'required|string',
-            'items' => 'required|array|min:2',
-            'items.*.account_id' => 'required|exists:chart_of_accounts,id',
-            'items.*.debit' => 'numeric',
-            'items.*.credit' => 'numeric'
-        ]);
+        $accounts = ChartOfAccount::where('is_active', true)
+            ->orderBy('code', 'asc')
+            ->get();
 
-        // Cek Balance Debit & Kredit
-        $totalDebit = collect($request->items)->sum('debit');
-        $totalCredit = collect($request->items)->sum('credit');
-
-        if ($totalDebit !== $totalCredit) {
-            return response()->json(['message' => 'Jurnal tidak seimbang (Total Debit & Kredit harus sama)'], 422);
+        if ($request->wantsJson()) {
+            return response()->json(['data' => $journals]);
         }
 
+        return view('admin.journals.index', compact('journals', 'accounts'));
+    }
+
+    public function store(StoreJournalRequest $request)
+    {
         DB::beginTransaction();
         try {
+            $journalNumber = 'JRN-' . date('Ym') . '-' . sprintf('%04d', Journal::count() + 1);
+
             $journal = Journal::create([
-                'journal_number' => 'JRN-' . time(),
-                'journal_date' => $request->journal_date,
-                'description' => $request->description,
-                'status' => 'posted',
-                'created_by' => auth()->id()
+                'journal_number'   => $journalNumber,
+                'journal_date'     => $request->journal_date,
+                'reference_number' => $request->reference_number,
+                'description'      => $request->description,
+                'status'           => 'posted',
+                'created_by'       => auth()->id(),
             ]);
 
             foreach ($request->items as $item) {
-                JournalDetail::create([
-                    'journal_id' => $journal->id,
-                    'account_id' => $item['account_id'],
-                    'tax_id' => $item['tax_id'] ?? null,
-                    'debit' => $item['debit'] ?? 0,
-                    'credit' => $item['credit'] ?? 0,
-                    'memo' => $item['memo'] ?? null
-                ]);
+                if (($item['debit'] ?? 0) > 0 || ($item['credit'] ?? 0) > 0) {
+                    JournalDetail::create([
+                        'journal_id' => $journal->id,
+                        'account_id' => $item['account_id'],
+                        'debit'      => $item['debit'] ?? 0,
+                        'credit'     => $item['credit'] ?? 0,
+                        'memo'       => $item['memo'] ?? null,
+                    ]);
+                }
             }
 
             DB::commit();
-            return response()->json(['message' => 'Jurnal umum berhasil disimpan', 'data' => $journal->load('details')], 201);
+
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Jurnal umum berhasil disimpan', 'data' => $journal->load('details')], 201);
+            }
+
+            return redirect()->route('journals.index')->with('success', 'Jurnal umum ' . $journalNumber . ' berhasil disimpan.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => $e->getMessage()], 500);
+
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Gagal menyimpan jurnal: ' . $e->getMessage()], 500);
+            }
+
+            return redirect()->back()->with('error', 'Gagal menyimpan jurnal: ' . $e->getMessage())->withInput();
         }
     }
 
-    // Reversal Jurnal (Pembatalan Transaksi)
-    public function reverse($id)
+    /**
+     * Membalikkan Jurnal (Reversal Journal Entry)
+     */
+    public function reverse(Request $request, $id)
     {
-        $original = Journal::with('details')->findOrFail($id);
+        $originalJournal = Journal::with('details')->findOrFail($id);
 
-        if ($original->status === 'reversed') {
-            return response()->json(['message' => 'Jurnal ini sudah pernah dibatalkan'], 422);
+        if ($originalJournal->status === 'reversed') {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Jurnal ini sudah pernah dibatalkan sebelumnya.'], 422);
+            }
+            return redirect()->back()->with('error', 'Jurnal ini sudah pernah dibatalkan.');
         }
 
         DB::beginTransaction();
         try {
-            $reversal = Journal::create([
-                'journal_number' => 'REV-' . $original->journal_number,
-                'journal_date' => now()->toDateString(),
-                'description' => 'Reversal dari ' . $original->journal_number,
-                'status' => 'posted',
-                'created_by' => auth()->id()
+            $reversalNumber = 'REV-' . $originalJournal->journal_number;
+
+            $reversalJournal = Journal::create([
+                'journal_number'   => $reversalNumber,
+                'journal_date'     => date('Y-m-d'),
+                'reference_number' => $originalJournal->journal_number,
+                'description'      => '[REVERSAL/PEMBATALAN] ' . $originalJournal->description,
+                'status'           => 'posted',
+                'created_by'       => auth()->id(),
             ]);
 
-            // Dibalik: Debit jadi Kredit, Kredit jadi Debit
-            foreach ($original->details as $detail) {
+            // Pembalikan Otomatis: Debit jadi Kredit, Kredit jadi Debit
+            foreach ($originalJournal->details as $detail) {
                 JournalDetail::create([
-                    'journal_id' => $reversal->id,
+                    'journal_id' => $reversalJournal->id,
                     'account_id' => $detail->account_id,
-                    'debit' => $detail->credit,
-                    'credit' => $detail->debit,
-                    'memo' => 'Reversal entry'
+                    'debit'      => $detail->credit, // Tukar Posisi
+                    'credit'     => $detail->debit,  // Tukar Posisi
+                    'memo'       => 'Pembalikan otomatis dari ' . $originalJournal->journal_number,
                 ]);
             }
 
-            $original->update(['status' => 'reversed']);
+            // Update status jurnal asli
+            $originalJournal->update(['status' => 'reversed']);
 
             DB::commit();
-            return response()->json(['message' => 'Jurnal berhasil dibatalkan (reversed)', 'reversal' => $reversal]);
+
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Jurnal berhasil dibatalkan (reversed)', 'reversal' => $reversalJournal->load('details')]);
+            }
+
+            return redirect()->route('journals.index')->with('success', 'Jurnal ' . $originalJournal->journal_number . ' berhasil dibatalkan dengan Reversal Entry: ' . $reversalNumber);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => $e->getMessage()], 500);
+
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Gagal membalikkan jurnal: ' . $e->getMessage()], 500);
+            }
+
+            return redirect()->back()->with('error', 'Gagal membalikkan jurnal: ' . $e->getMessage());
         }
     }
 }

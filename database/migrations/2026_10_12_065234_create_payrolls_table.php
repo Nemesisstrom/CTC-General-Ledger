@@ -11,8 +11,8 @@ return new class extends Migration
         // Header Penggajian Karyawan
         Schema::create('payrolls', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users');
-            $table->string('period', 7); // Format: 'YYYY-MM'
+            $table->foreignId('user_id')->constrained('users')->comment('Pegawai / Karyawan');
+            $table->string('period', 7)->comment('Format: YYYY-MM');
             $table->decimal('basic_salary', 15, 2);
             $table->decimal('total_allowance', 15, 2)->default(0); // Tunjangan
             $table->decimal('total_deduction', 15, 2)->default(0); // Potongan Non-Pajak
@@ -28,7 +28,7 @@ return new class extends Migration
         Schema::create('payroll_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('payroll_id')->constrained('payrolls')->onDelete('cascade');
-            $table->string('name');
+            $table->string('name'); // Contoh: Tunjangan Makan, BPJS Kesehatan, Bonus
             $table->enum('type', ['allowance', 'deduction']);
             $table->decimal('amount', 15, 2);
             $table->timestamps();

@@ -13,7 +13,7 @@ class UserSeeder extends Seeder
         // Admin Default
         User::create([
             'name'        => 'Administrator',
-            'email'       => 'admin@perusahaan.com',
+            'email'       => 'admin@keuangan.com',
             'password'    => Hash::make('admin123'),
             'role'        => 'admin',
             'base_salary' => 10000000,
@@ -22,7 +22,7 @@ class UserSeeder extends Seeder
         // Akuntan Default
         User::create([
             'name'        => 'Akuntan Utama',
-            'email'       => 'akuntan@perusahaan.com',
+            'email'       => 'akuntan@keuangan.com',
             'password'    => Hash::make('akuntan123'),
             'role'        => 'akuntan',
             'base_salary' => 8000000,

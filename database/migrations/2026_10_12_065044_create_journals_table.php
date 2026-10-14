@@ -11,9 +11,9 @@ return new class extends Migration
         // Header Jurnal
         Schema::create('journals', function (Blueprint $table) {
             $table->id();
-            $table->string('journal_number')->unique(); // JRN-20260101-0001
+            $table->string('journal_number')->unique()->comment('Contoh: JRN-202610-0001');
             $table->date('journal_date');
-            $table->string('reference_number')->nullable();
+            $table->string('reference_number')->nullable()->comment('Nomor Referensi/Dokumen Pendukung');
             $table->text('description');
             $table->enum('status', ['draft', 'posted', 'reversed'])->default('posted');
             $table->foreignId('created_by')->constrained('users');

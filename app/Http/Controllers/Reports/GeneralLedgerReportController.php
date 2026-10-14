@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Reports;
 use App\Http\Controllers\Controller;
 use App\Models\ChartOfAccount;
 use App\Models\JournalDetail;
+use App\Exports\GeneralLedgerExport;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 
 class GeneralLedgerReportController extends Controller
 {

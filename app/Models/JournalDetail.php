@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\ChartOfAccount; // 👈 Pastikan di-import
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class JournalDetail extends Model
 {
@@ -12,25 +12,25 @@ class JournalDetail extends Model
 
     protected $fillable = [
         'journal_id',
-        'chart_of_account_id', // Sesuaikan dengan nama kolom foreign key di database Anda
+        'account_id',
+        'tax_id',
         'debit',
         'credit',
-        'description',
+        'memo',
     ];
 
-    /**
-     * Relasi ke Chart of Account
-     */
-    public function account()
-    {
-        return $this->belongsTo(ChartOfAccount::class, 'chart_of_account_id');
-    }
-
-    /**
-     * Relasi ke Journal Utama (jika diperlukan)
-     */
-    public function journal()
+    public function journal(): BelongsTo
     {
         return $this->belongsTo(Journal::class);
+    }
+
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(ChartOfAccount::class, 'account_id');
+    }
+
+    public function tax(): BelongsTo
+    {
+        return $this->belongsTo(Tax::class, 'tax_id');
     }
 }

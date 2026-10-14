@@ -2,38 +2,61 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Payroll;
-use App\Models\PayrollItem;
-use App\Models\User;
+use App\Http\Requests\StorePayrollRequest;
+use App\Models\ChartOfAccount;
 use App\Models\Journal;
 use App\Models\JournalDetail;
+use App\Models\Payroll;
+use App\Models\PayrollItem;
 use App\Models\Tax;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class PayrollController extends Controller
 {
-    public function store(Request $request)
+    public function index(Request $request)
     {
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'period' => 'required|string', // Contoh '2026-03'
-            'allowances' => 'array',
-            'deductions' => 'array',
-            'salary_expense_account_id' => 'required|exists:chart_of_accounts,id',
-            'cash_account_id' => 'required|exists:chart_of_accounts,id'
-        ]);
+        $period = $request->input('period', date('Y-m'));
 
+        $payrolls = Payroll::with(['user', 'items', 'journal'])
+            ->where('period', $period)
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $employees = User::where('is_active', true ?? true)->get();
+
+        // Akun Beban Gaji & Akun Kas/Bank untuk dropdown posting
+        $expenseAccounts = ChartOfAccount::where('type', 'expense')->where('is_active', true)->get();
+        $cashAccounts    = ChartOfAccount::where('type', 'asset')->where('is_active', true)->get();
+        $liabilityAccounts = ChartOfAccount::where('type', 'liability')->where('is_active', true)->get();
+
+        if ($request->wantsJson()) {
+            return response()->json(['data' => $payrolls]);
+        }
+
+        return view('admin.payroll.index', compact('payrolls', 'employees', 'period', 'expenseAccounts', 'cashAccounts', 'liabilityAccounts'));
+    }
+
+    public function store(StorePayrollRequest $request)
+    {
         $user = User::findOrFail($request->user_id);
         $basicSalary = $user->base_salary;
 
-        // Hitung Tambahan Tunjangan
-        $totalAllowance = collect($request->allowances)->sum('amount');
+        // Cek jika payroll karyawan untuk periode tersebut sudah ada
+        $existing = Payroll::where('user_id', $user->id)->where('period', $request->period)->first();
+        if ($existing) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Gaji karyawan untuk periode ini sudah pernah diproses.'], 422);
+            }
+            return redirect()->back()->with('error', 'Gaji karyawan untuk periode ' . $request->period . ' sudah pernah diproses.')->withInput();
+        }
 
-        // Hitung Potongan Lain
+        // 1. Kalkulasi Total Tunjangan & Potongan
+        $totalAllowance = collect($request->allowances)->sum('amount');
         $totalDeduction = collect($request->deductions)->sum('amount');
 
-        // Otomatisasi PPh 21
+        // 2. Kalkulasi Otomatis PPh 21
         $grossIncome = $basicSalary + $totalAllowance;
         $pph21Amount = $this->calculatePPh21($grossIncome);
 
@@ -41,69 +64,118 @@ class PayrollController extends Controller
 
         DB::beginTransaction();
         try {
-            // 1. Buat Payroll
+            // 3. Simpan Header Payroll
             $payroll = Payroll::create([
-                'user_id' => $user->id,
-                'period' => $request->period,
-                'basic_salary' => $basicSalary,
+                'user_id'         => $user->id,
+                'period'          => $request->period,
+                'basic_salary'    => $basicSalary,
                 'total_allowance' => $totalAllowance,
                 'total_deduction' => $totalDeduction,
-                'pph21_amount' => $pph21Amount,
-                'net_salary' => $netSalary,
-                'status' => 'approved',
-                'created_by' => auth()->id()
+                'pph21_amount'    => $pph21Amount,
+                'net_salary'      => $netSalary,
+                'status'          => 'approved',
+                'created_by'      => auth()->id(),
             ]);
 
-            // 2. Simpan Item Detail
+            // 4. Simpan Detail Komponen Tunjangan & Potongan
             if ($request->allowances) {
                 foreach ($request->allowances as $item) {
-                    PayrollItem::create(['payroll_id' => $payroll->id, 'name' => $item['name'], 'type' => 'allowance', 'amount' => $item['amount']]);
+                    if (!empty($item['name']) && $item['amount'] > 0) {
+                        PayrollItem::create([
+                            'payroll_id' => $payroll->id,
+                            'name'       => $item['name'],
+                            'type'       => 'allowance',
+                            'amount'     => $item['amount'],
+                        ]);
+                    }
                 }
             }
+
             if ($request->deductions) {
                 foreach ($request->deductions as $item) {
-                    PayrollItem::create(['payroll_id' => $payroll->id, 'name' => $item['name'], 'type' => 'deduction', 'amount' => $item['amount']]);
+                    if (!empty($item['name']) && $item['amount'] > 0) {
+                        PayrollItem::create([
+                            'payroll_id' => $payroll->id,
+                            'name'       => $item['name'],
+                            'type'       => 'deduction',
+                            'amount'     => $item['amount'],
+                        ]);
+                    }
                 }
             }
 
-            // 3. Auto Posting ke Jurnal Umum Keuangan
+            // 5. Auto Posting ke Jurnal Umum Keuangan
             $taxPph21 = Tax::where('type', 'PPh21')->first();
-            $pphAccountId = $taxPph21 ? $taxPph21->account_id : $request->cash_account_id;
+            $pphAccountId = $request->pph_account_id ?? ($taxPph21 ? $taxPph21->account_id : $request->cash_account_id);
 
             $journal = Journal::create([
-                'journal_number' => 'PAY-' . $payroll->period . '-' . $user->id,
-                'journal_date' => now()->toDateString(),
-                'description' => 'Penggajian ' . $user->name . ' Periode ' . $payroll->period,
-                'status' => 'posted',
-                'created_by' => auth()->id()
+                'journal_number'   => 'JRN-PAY-' . $payroll->period . '-' . sprintf('%03d', $user->id),
+                'journal_date'     => date('Y-m-d'),
+                'reference_number' => 'PAY-' . $payroll->id,
+                'description'      => 'Penggajian ' . $user->name . ' (Periode ' . $payroll->period . ')',
+                'status'           => 'posted',
+                'created_by'       => auth()->id(),
             ]);
 
             $payroll->update(['journal_id' => $journal->id]);
 
-            // Debit: Beban Gaji (Gaji Kotor)
-            JournalDetail::create(['journal_id' => $journal->id, 'account_id' => $request->salary_expense_account_id, 'debit' => $grossIncome, 'credit' => 0]);
+            // Debit: Beban Gaji (Gaji Kotor / Gross Income)
+            JournalDetail::create([
+                'journal_id' => $journal->id,
+                'account_id' => $request->salary_expense_account_id,
+                'debit'      => $grossIncome,
+                'credit'     => 0,
+                'memo'       => 'Beban Gaji Kotor ' . $user->name,
+            ]);
 
             // Kredit: Utang/Potongan PPh 21
             if ($pph21Amount > 0) {
-                JournalDetail::create(['journal_id' => $journal->id, 'account_id' => $pphAccountId, 'debit' => 0, 'credit' => $pph21Amount]);
+                JournalDetail::create([
+                    'journal_id' => $journal->id,
+                    'account_id' => $pphAccountId,
+                    'tax_id'     => $taxPph21?->id,
+                    'debit'      => 0,
+                    'credit'     => $pph21Amount,
+                    'memo'       => 'Hutang / Potongan PPh 21 Gaji',
+                ]);
             }
 
             // Kredit: Kas/Bank (Gaji Bersih Diterima Karyawan)
-            JournalDetail::create(['journal_id' => $journal->id, 'account_id' => $request->cash_account_id, 'debit' => 0, 'credit' => $netSalary]);
+            JournalDetail::create([
+                'journal_id' => $journal->id,
+                'account_id' => $request->cash_account_id,
+                'debit'      => 0,
+                'credit'     => $netSalary + $totalDeduction, // Total Pengeluaran Kas/Kewajiban
+                'memo'       => 'Pembayaran Gaji Bersih ' . $user->name,
+            ]);
 
             DB::commit();
-            return response()->json(['message' => 'Penggajian berhasil diproses & otomatisasi PPh21 diposting ke Keuangan', 'data' => $payroll]);
+
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Penggajian berhasil diproses & di-jurnal', 'data' => $payroll->load('items')], 201);
+            }
+
+            return redirect()->route('payrolls.index', ['period' => $request->period])
+                ->with('success', 'Gaji karyawan ' . $user->name . ' berhasil diproses dan di-jurnal.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => $e->getMessage()], 500);
+
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Gagal memproses gaji: ' . $e->getMessage()], 500);
+            }
+
+            return redirect()->back()->with('error', 'Gagal memproses gaji: ' . $e->getMessage())->withInput();
         }
     }
 
-    private function calculatePPh21($grossIncome)
+    /**
+     * Logika Kalkulasi PPh 21 Sederhana (Aturan Progresif / TER)
+     */
+    private function calculatePPh21(float $grossIncome): float
     {
-        // Formula Asumsi Sederhana PPh 21 Progresif / TER
+        // Contoh formula progresif sederhana: Penghasilan Kena Pajak di atas 5 Juta/bulan dikenakan 5%
         if ($grossIncome > 5000000) {
-            return ($grossIncome - 5000000) * 0.05; // 5% dari kelebihan di atas 5 Juta
+            return ($grossIncome - 5000000) * 0.05;
         }
         return 0;
     }
