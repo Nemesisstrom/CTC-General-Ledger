@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCashTransactionRequest;
 use App\Models\CashTransaction;
 use App\Models\ChartOfAccount;
@@ -9,6 +10,7 @@ use App\Models\Journal;
 use App\Models\JournalDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Exception;
 
 class CashTransactionController extends Controller
 {
@@ -38,9 +40,10 @@ class CashTransactionController extends Controller
     {
         DB::beginTransaction();
         try {
-            // 1. Generate Nomor Transaksi Unik
+            // 1. Generate Nomor Transaksi Unik (Aman dari Duplikasi)
+            $nextId = (CashTransaction::max('id') ?? 0) + 1;
             $prefix = $request->type === 'in' ? 'TRX-IN-' : 'TRX-OUT-';
-            $transactionNumber = $prefix . date('Ym') . '-' . sprintf('%04d', CashTransaction::count() + 1);
+            $transactionNumber = $prefix . date('Ym') . '-' . sprintf('%04d', $nextId);
 
             // 2. Simpan Transaksi Kas
             $trx = CashTransaction::create([
@@ -53,6 +56,10 @@ class CashTransactionController extends Controller
                 'description'         => $request->description,
                 'created_by'          => auth()->id(),
             ]);
+
+            // Ambil nama akun lawan untuk penulisan memo jurnal
+            $oppositeAccount = ChartOfAccount::find($request->opposite_account_id);
+            $oppositeAccountName = $oppositeAccount ? $oppositeAccount->name : 'Akun Lawan';
 
             // 3. Auto-Posting ke Jurnal Umum (Integrasi Modul Keuangan)
             $journal = Journal::create([
@@ -78,7 +85,7 @@ class CashTransactionController extends Controller
                     'account_id' => $request->opposite_account_id,
                     'debit'      => 0,
                     'credit'     => $request->amount,
-                    'memo'       => 'Penerimaan dari ' . $trx->oppositeAccount->name,
+                    'memo'       => 'Penerimaan dari ' . $oppositeAccountName,
                 ]);
             } else {
                 // Kas Keluar: Akun Lawan (Debit), Kas/Bank (Kredit)
@@ -87,7 +94,7 @@ class CashTransactionController extends Controller
                     'account_id' => $request->opposite_account_id,
                     'debit'      => $request->amount,
                     'credit'     => 0,
-                    'memo'       => 'Pengeluaran untuk ' . $trx->oppositeAccount->name,
+                    'memo'       => 'Pengeluaran untuk ' . $oppositeAccountName,
                 ]);
                 JournalDetail::create([
                     'journal_id' => $journal->id,
@@ -101,18 +108,27 @@ class CashTransactionController extends Controller
             DB::commit();
 
             if ($request->wantsJson()) {
-                return response()->json(['message' => 'Transaksi kas berhasil disimpan & di-jurnal', 'data' => $trx], 201);
+                return response()->json([
+                    'message' => 'Transaksi kas berhasil disimpan & di-jurnal',
+                    'data'    => $trx
+                ], 201);
             }
 
-            return redirect()->route('cash-transactions.index')->with('success', 'Transaksi kas berhasil dicatat dan diposting ke jurnal.');
-        } catch (\Exception $e) {
+            return redirect()
+                ->route('admin.cash-transactions.index')
+                ->with('success', 'Transaksi kas berhasil dicatat dan diposting ke jurnal.');
+
+        } catch (Exception $e) {
             DB::rollBack();
 
             if ($request->wantsJson()) {
                 return response()->json(['error' => 'Gagal memproses transaksi: ' . $e->getMessage()], 500);
             }
 
-            return redirect()->back()->with('error', 'Gagal memproses transaksi: ' . $e->getMessage())->withInput();
+            return redirect()
+                ->back()
+                ->with('error', 'Gagal memproses transaksi: ' . $e->getMessage())
+                ->withInput();
         }
     }
 }

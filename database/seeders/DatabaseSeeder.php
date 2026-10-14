@@ -48,8 +48,11 @@ class DatabaseSeeder extends Seeder
         );
         $staff->assignRole($akuntanRole);
 
-        // 5. Panggil Seeder Chart of Accounts yang sudah dibuat sebelumnya
+        // Panggil seeder sesuai urutan ketergantungan data:
+        // 1. RolePermissionSeeder (Menyiapkan Permissions, Roles, dan Default Users)
+        // 2. ChartOfAccountSeeder (Menyiapkan Master Data Akun / COA)
         $this->call([
+            RolePermissionSeeder::class,
             ChartOfAccountSeeder::class,
         ]);
     }

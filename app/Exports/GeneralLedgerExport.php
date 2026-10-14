@@ -7,8 +7,9 @@ use App\Models\ChartOfAccount;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithTitle;
 
-class GeneralLedgerExport implements FromCollection, WithHeadings, WithMapping
+class GeneralLedgerExport implements FromCollection, WithHeadings, WithMapping, WithTitle
 {
     protected $accountId;
     protected $startDate;
@@ -29,12 +30,13 @@ class GeneralLedgerExport implements FromCollection, WithHeadings, WithMapping
                 $q->whereBetween('journal_date', [$this->startDate, $this->endDate])
                   ->where('status', 'posted');
             })
-            ->get();
+            ->get()
+            ->sortBy(fn($entry) => $entry->journal->journal_date);
     }
 
     public function headings(): array
     {
-        return ['Tanggal', 'No. Jurnal', 'Keterangan', 'Debit (Rp)', 'Kredit (Rp)'];
+        return ['Tanggal Jurnal', 'No. Jurnal', 'Keterangan / Memo', 'Debit (Rp)', 'Kredit (Rp)'];
     }
 
     public function map($row): array
@@ -46,5 +48,10 @@ class GeneralLedgerExport implements FromCollection, WithHeadings, WithMapping
             $row->debit,
             $row->credit,
         ];
+    }
+
+    public function title(): string
+    {
+        return 'Buku Besar';
     }
 }

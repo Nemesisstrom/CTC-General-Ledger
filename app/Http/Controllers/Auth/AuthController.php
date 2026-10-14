@@ -27,12 +27,32 @@ class AuthController extends Controller
 
     public function loginWeb(LoginRequest $request)
     {
-        // Gunakan $request->validated() atau $request->only()
-        $credentials = $request->validated();
+        $credentials = $request->only(['email', 'password']);
+        $selectedRole = strtolower($request->input('role', ''));
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            $user = Auth::user();
+
+            // Cek apakah user memiliki role Spatie yang dipilih
+            if (!empty($selectedRole) && !$user->hasRole($selectedRole)) {
+                Auth::logout();
+                $request->session()->invalidate();
+                
+                throw ValidationException::withMessages([
+                    'role' => ['Akun Anda tidak memiliki hak akses sebagai ' . ucfirst($selectedRole) . '.'],
+                ]);
+            }
+
+            // Simpan role aktif di session
+            if (!empty($selectedRole)) {
+                session(['active_role' => $selectedRole]);
+            } else {
+                session(['active_role' => $user->getRoleNames()->first() ?? $user->role]);
+            }
+
             $request->session()->regenerate();
-            return redirect()->intended('/dashboard')->with('success', 'Selamat datang kembali!');
+
+            return redirect()->route('dashboard')->with('success', 'Selamat datang kembali!');
         }
 
         throw ValidationException::withMessages([
@@ -47,12 +67,13 @@ class AuthController extends Controller
             'name'        => $request->name,
             'email'       => $request->email,
             'password'    => Hash::make($request->password),
-            'role'        => $request->role,
+            'role'        => strtolower($request->role),
             'base_salary' => $request->base_salary ?? 0,
+            'is_active'   => true,
         ]);
 
         // 2. Assign Role Spatie
-        $user->assignRole($request->role);
+        $user->assignRole(strtolower($request->role));
 
         // 3. Trigger event pengiriman email verifikasi
         event(new Registered($user));
@@ -96,7 +117,7 @@ class AuthController extends Controller
                 'id'          => $user->id,
                 'name'        => $user->name,
                 'email'       => $user->email,
-                'role'        => $user->getRoleNames()->first() ?? null,
+                'role'        => $user->getRoleNames()->first() ?? $user->role,
                 'permissions' => $user->getAllPermissions()->pluck('name'),
             ]
         ]);
@@ -108,11 +129,12 @@ class AuthController extends Controller
             'name'        => $request->name,
             'email'       => $request->email,
             'password'    => Hash::make($request->password),
-            'role'        => $request->role,
+            'role'        => strtolower($request->role),
             'base_salary' => $request->base_salary ?? 0,
+            'is_active'   => true,
         ]);
 
-        $user->assignRole($request->role);
+        $user->assignRole(strtolower($request->role));
 
         // Send Email Verification via API
         event(new Registered($user));
@@ -125,5 +147,14 @@ class AuthController extends Controller
             'token_type'   => 'Bearer',
             'user'         => $user
         ], 201);
+    }
+
+    public function logoutApi(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'message' => 'Berhasil logout dan menghapus token API.'
+        ]);
     }
 }

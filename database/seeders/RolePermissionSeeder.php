@@ -16,11 +16,11 @@ class RolePermissionSeeder extends Seeder
         // Reset cached roles and permissions
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // 1. Buat Daftar Permission per Modul
+        // 1. Buat Daftar Permission per Modul (Diselaraskan dengan Web & API Routes)
         $permissions = [
             // User & Master Data
             'manage-users',
-            'manage-coa',
+            'manage-chart-of-accounts',
 
             // Keuangan & Kas
             'manage-cash-transactions',
@@ -47,11 +47,12 @@ class RolePermissionSeeder extends Seeder
 
         // 2. Buat Role Admin & Assign Semua Permission
         $adminRole = Role::findOrCreate('admin', 'web');
-        $adminRole->givePermissionTo(Permission::all());
+        $adminRole->syncPermissions(Permission::all());
 
         // 3. Buat Role Akuntan & Assign Permission Spesifik
         $akuntanRole = Role::findOrCreate('akuntan', 'web');
-        $akuntanRole->givePermissionTo([
+        $akuntanRole->syncPermissions([
+            'manage-chart-of-accounts',
             'manage-cash-transactions',
             'manage-journals',
             'reverse-journals',
@@ -66,25 +67,52 @@ class RolePermissionSeeder extends Seeder
             'view-reports-payroll',
         ]);
 
-        // 4. Buat User Default dan Assign Role Spatie
-        // Buat Admin
-        $admin = User::create([
-            'name'        => 'Administrator',
-            'email'       => 'admin@keuangan.com',
-            'password'    => Hash::make('admin123'),
-            'role'        => 'admin', // Isi kolom Enum
-            'base_salary' => 10000000,
+        // 4. Buat Role Staff (Role Default Registrasi)
+        $staffRole = Role::findOrCreate('staff', 'web');
+        $staffRole->syncPermissions([
+            'manage-cash-transactions',
+            'manage-payrolls',
         ]);
-        $admin->assignRole('admin'); // Assign Role Spatie
 
-        // Buat Akuntan
-        $akuntan = User::create([
-            'name'        => 'Akuntan Utama',
-            'email'       => 'akuntan@keuangan.com',
-            'password'    => Hash::make('akuntan123'),
-            'role'        => 'akuntan', // Isi kolom Enum
-            'base_salary' => 8000000,
-        ]);
-        $akuntan->assignRole('akuntan'); // Assign Role Spatie
+        // 5. Buat User Default (Gunakan firstOrCreate agar Seeder Idempotent)
+        
+        // Account Admin
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@keuangan.com'],
+            [
+                'name'              => 'Administrator',
+                'password'          => Hash::make('admin123'),
+                'role'              => 'admin',
+                'base_salary'       => 10000000,
+                'email_verified_at' => now(),
+            ]
+        );
+        $admin->syncRoles([$adminRole]);
+
+        // Account Akuntan
+        $akuntan = User::firstOrCreate(
+            ['email' => 'akuntan@keuangan.com'],
+            [
+                'name'              => 'Akuntan Utama',
+                'password'          => Hash::make('akuntan123'),
+                'role'              => 'akuntan',
+                'base_salary'       => 8000000,
+                'email_verified_at' => now(),
+            ]
+        );
+        $akuntan->syncRoles([$akuntanRole]);
+
+        // Account Staff
+        $staff = User::firstOrCreate(
+            ['email' => 'staff@keuangan.com'],
+            [
+                'name'              => 'Staff Operasional',
+                'password'          => Hash::make('staff123'),
+                'role'              => 'staff',
+                'base_salary'       => 5000000,
+                'email_verified_at' => now(),
+            ]
+        );
+        $staff->syncRoles([$staffRole]);
     }
 }

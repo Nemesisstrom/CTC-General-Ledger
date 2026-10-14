@@ -1,118 +1,168 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+
+// Auth Controllers
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\PasswordResetController;
+
+// Admin Controllers
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ChartOfAccountController;
-use App\Http\Controllers\CashTransactionController;
-use App\Http\Controllers\JournalController;
-use App\Http\Controllers\BankReconciliationController;
-use App\Http\Controllers\AdjustmentController;
-use App\Http\Controllers\TaxController;
-use App\Http\Controllers\PayrollController;
-use App\Http\Controllers\Reports\GeneralLedgerReportController;
-use App\Http\Controllers\Reports\ProfitLossReportController;
-use App\Http\Controllers\Reports\BalanceSheetReportController;
-use App\Http\Controllers\Reports\TaxReportController;
-use App\Http\Controllers\Reports\PayrollReportController;
+use App\Http\Controllers\Admin\CashTransactionController;
+use App\Http\Controllers\Admin\JournalController;
+use App\Http\Controllers\Admin\BankReconciliationController;
+use App\Http\Controllers\Admin\AdjustmentController;
+use App\Http\Controllers\Admin\TaxController;
+use App\Http\Controllers\Admin\PayrollController;
 
-// Root redirect ke login
+// Admin Report Controllers
+use App\Http\Controllers\Admin\Reports\GeneralLedgerReportController;
+use App\Http\Controllers\Admin\Reports\ProfitLossReportController;
+use App\Http\Controllers\Admin\Reports\BalanceSheetReportController;
+use App\Http\Controllers\Admin\Reports\TaxReportController;
+use App\Http\Controllers\Admin\Reports\PayrollReportController;
+
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+*/
+
+// Root Redirect ke Halaman Login
 Route::get('/', function () {
     return redirect()->route('login');
 });
 
-// Auth Routes (Tamu / Belum Login)
+// ==========================================
+// Guest Routes (Autentikasi & Reset Password)
+// ==========================================
 Route::middleware('guest')->group(function () {
-    // Form & Proses Login
+    // Login
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'loginWeb'])->name('login.post');
 
-    // Form & Proses Registrasi
+    // Registrasi
     Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
     Route::post('/register', [AuthController::class, 'registerWeb'])->name('register.post');
 
-    // Fitur Lupa & Reset Password
+    // Lupa & Reset Password
     Route::get('/forgot-password', [PasswordResetController::class, 'showForgotPasswordForm'])->name('password.request');
     Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkWeb'])->name('password.email');
     Route::get('/reset-password/{token}', [PasswordResetController::class, 'showResetPasswordForm'])->name('password.reset');
     Route::post('/reset-password', [PasswordResetController::class, 'resetPasswordWeb'])->name('password.update');
 });
 
-// Authenticated Routes (Sudah Login)
+// ==========================================
+// Authenticated Routes (Akses Pengguna Terautentikasi)
+// ==========================================
 Route::middleware('auth')->group(function () {
+
+    // Logout
     Route::post('/logout', [AuthController::class, 'logoutWeb'])->name('logout');
 
-    // Route Verifikasi Email
+    // Verifikasi Email
     Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
-    Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])->middleware(['signed'])->name('verification.verify');
-    Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])->middleware(['throttle:6,1'])->name('verification.send');
+    Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+        ->middleware(['signed'])
+        ->name('verification.verify');
+    Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
+        ->middleware(['throttle:6,1'])
+        ->name('verification.send');
 
-    // Dashboard UI (Akses Role: Admin & Akuntan)
-    Route::get('/dashboard', [DashboardController::class, 'index'])
-        ->middleware('auth', 'role:admin|akuntan')//'verified'
+    // ==========================================
+    // Panel Admin & Operasional (Prefix: /admin)
+    // ==========================================
+    Route::prefix('admin')->name('admin.')->group(function () {
+
+    // Dashboard
+     Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->middleware(['verified', 'role:admin|akuntan|staff'])
         ->name('dashboard');
 
-    // Khusus Admin
-    Route::middleware('role:admin')->group(function () {
-        Route::resource('users', UserController::class);
-        Route::resource('chart-of-accounts', ChartOfAccountController::class);
-    });
+        // Khusus Admin (Manajemen User & COA)
+        Route::middleware('role:admin')->group(function () {
+            Route::resource('users', UserController::class);
+            Route::resource('chart-of-accounts', ChartOfAccountController::class);
+        });
 
-    // Modul Transaksi & Jurnal
-    Route::middleware('permission:manage-journals')->group(function () {
-        Route::get('/journals', [JournalController::class, 'index'])->name('journals.index');
-        Route::post('/journals', [JournalController::class, 'store'])->name('journals.store');
-    });
+        // Modul Jurnal Umum & Reversal
+        Route::middleware('permission:manage-journals')->group(function () {
+            Route::get('/journals', [JournalController::class, 'index'])->name('journals.index');
+            Route::post('/journals', [JournalController::class, 'store'])->name('journals.store');
+        });
 
-    Route::post('/journals/{id}/reverse', [JournalController::class, 'reverse'])
-        ->middleware('permission:reverse-journals')
-        ->name('journals.reverse');
+        Route::post('/journals/{id}/reverse', [JournalController::class, 'reverse'])
+            ->middleware('permission:reverse-journals')
+            ->name('journals.reverse');
 
-    // Modul Kas, Rekonsiliasi, Penyesuaian, Pajak, & Payroll (Menggunakan Resource yang bersih)
-    Route::middleware('permission:manage-cash-transactions')->group(function () {
-        Route::resource('cash-transactions', CashTransactionController::class)->only(['index', 'store']);
-    });
+        // Modul Transaksi Operasional
+        Route::middleware('permission:manage-cash-transactions')->group(function () {
+            Route::resource('cash-transactions', CashTransactionController::class)->only(['index', 'store']);
+        });
 
-    Route::middleware('permission:manage-bank-reconciliations')->group(function () {
-        Route::resource('bank-reconciliations', BankReconciliationController::class)->only(['index', 'store']);
-    });
+        Route::middleware('permission:manage-bank-reconciliations')->group(function () {
+            Route::resource('bank-reconciliations', BankReconciliationController::class)->only(['index', 'store']);
+        });
 
-    Route::middleware('permission:manage-adjustments')->group(function () {
-        Route::resource('adjustments', AdjustmentController::class)->only(['index', 'store']);
-    });
+        Route::middleware('permission:manage-adjustments')->group(function () {
+            Route::resource('adjustments', AdjustmentController::class)->only(['index', 'store']);
+        });
 
-    Route::middleware('permission:process-taxes')->group(function () {
-        Route::get('/taxes', [TaxController::class, 'index'])->name('taxes.index');
-        Route::post('/taxes/process', [TaxController::class, 'processTaxTransaction'])->name('taxes.process');
-    });
+        // Modul Pajak & Penggajian
+        Route::middleware('permission:process-taxes')->group(function () {
+            Route::get('/taxes', [TaxController::class, 'index'])->name('taxes.index');
+            Route::post('/taxes/process', [TaxController::class, 'processTaxTransaction'])->name('taxes.process');
+        });
 
-    Route::middleware('permission:manage-payrolls')->group(function () {
-        Route::resource('payrolls', PayrollController::class)->only(['index', 'store']);
-    });
+        Route::middleware('permission:manage-payrolls')->group(function () {
+            Route::resource('payrolls', PayrollController::class)->only(['index', 'store']);
+        });
 
-    // Modul Laporan (Diconsolidasi & Diberi Nama Route)
-    Route::prefix('reports')->name('reports.')->group(function () {
-        Route::get('/general-ledger', [GeneralLedgerReportController::class, 'index'])
-            ->middleware('permission:view-reports-general-ledger')
-            ->name('general-ledger');
+        // ==========================================
+        // Sub-modul Laporan (Prefix: /admin/reports)
+        // ==========================================
+        Route::prefix('reports')->name('reports.')->group(function () {
 
-        Route::get('/profit-loss', [ProfitLossReportController::class, 'index'])
-            ->middleware('permission:view-reports-profit-loss')
-            ->name('profit-loss');
+            // 1. Buku Besar (General Ledger)
+            Route::middleware('permission:view-reports-general-ledger')->group(function () {
+                Route::get('/general-ledger', [GeneralLedgerReportController::class, 'index'])->name('general-ledger');
+                Route::get('/general-ledger/pdf', [GeneralLedgerReportController::class, 'exportPdf'])->name('general-ledger.pdf');
+                Route::get('/general-ledger/excel', [GeneralLedgerReportController::class, 'exportExcel'])->name('general-ledger.excel');
+            });
 
-        Route::get('/balance-sheet', [BalanceSheetReportController::class, 'index'])
-            ->middleware('permission:view-reports-balance-sheet')
-            ->name('balance-sheet');
+            // 2. Laba Rugi (Profit & Loss)
+            Route::middleware('permission:view-reports-profit-loss')->group(function () {
+                Route::get('/profit-loss', [ProfitLossReportController::class, 'index'])->name('profit-loss');
+                Route::get('/profit-loss/pdf', [ProfitLossReportController::class, 'exportPdf'])->name('profit-loss.pdf');
+                Route::get('/profit-loss/excel', [ProfitLossReportController::class, 'exportExcel'])->name('profit-loss.excel');
+            });
 
-        Route::get('/tax', [TaxReportController::class, 'index'])
-            ->middleware('permission:view-reports-tax')
-            ->name('tax');
+            // 3. Neraca (Balance Sheet)
+            Route::middleware('permission:view-reports-balance-sheet')->group(function () {
+                Route::get('/balance-sheet', [BalanceSheetReportController::class, 'index'])->name('balance-sheet');
+                Route::get('/balance-sheet/pdf', [BalanceSheetReportController::class, 'exportPdf'])->name('balance-sheet.pdf');
+                Route::get('/balance-sheet/excel', [BalanceSheetReportController::class, 'exportExcel'])->name('balance-sheet.excel');
+            });
 
-        Route::get('/payroll', [PayrollReportController::class, 'index'])
-            ->middleware('permission:view-reports-payroll')
-            ->name('payroll');
-    });
-});
+            // 4. Laporan Pajak (Tax Report)
+            Route::middleware('permission:view-reports-tax')->group(function () {
+                Route::get('/tax', [TaxReportController::class, 'index'])->name('tax');
+                Route::get('/tax/pdf', [TaxReportController::class, 'exportPdf'])->name('tax.pdf');
+                Route::get('/tax/excel', [TaxReportController::class, 'exportExcel'])->name('tax.excel');
+            });
+
+            // 5. Laporan Penggajian (Payroll Report)
+            Route::middleware('permission:view-reports-payroll')->group(function () {
+                Route::get('/payroll', [PayrollReportController::class, 'index'])->name('payroll');
+                Route::get('/payroll/pdf', [PayrollReportController::class, 'exportPdf'])->name('payroll.pdf');
+                Route::get('/payroll/excel', [PayrollReportController::class, 'exportExcel'])->name('payroll.excel');
+            });
+
+        }); // End Reports Prefix
+
+    }); // End Admin Prefix
+
+}); // End Auth Middleware

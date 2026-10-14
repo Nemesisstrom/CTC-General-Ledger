@@ -1,13 +1,15 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreAdjustmentRequest;
 use App\Models\ChartOfAccount;
 use App\Models\Journal;
 use App\Models\JournalDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Exception;
 
 class AdjustmentController extends Controller
 {
@@ -41,7 +43,9 @@ class AdjustmentController extends Controller
     {
         DB::beginTransaction();
         try {
-            $journalNumber = 'ADJ-' . date('Ym') . '-' . sprintf('%04d', Journal::count() + 1);
+            // Generasi nomor jurnal penyesuaian berbasis ID terakhir agar aman dari duplikasi
+            $nextId = (Journal::max('id') ?? 0) + 1;
+            $journalNumber = 'ADJ-' . date('Ym') . '-' . sprintf('%04d', $nextId);
 
             // 1. Simpan Header Jurnal Penyesuaian
             $journal = Journal::create([
@@ -80,15 +84,20 @@ class AdjustmentController extends Controller
                 ], 201);
             }
 
-            return redirect()->route('adjustments.index')->with('success', 'Jurnal penyesuaian ' . $journalNumber . ' berhasil diposting.');
-        } catch (\Exception $e) {
+            return redirect()
+                ->route('admin.adjustments.index')
+                ->with('success', 'Jurnal penyesuaian ' . $journalNumber . ' berhasil diposting.');
+        } catch (Exception $e) {
             DB::rollBack();
 
             if ($request->wantsJson()) {
                 return response()->json(['error' => 'Gagal memproses penyesuaian: ' . $e->getMessage()], 500);
             }
 
-            return redirect()->back()->with('error', 'Gagal memproses penyesuaian: ' . $e->getMessage())->withInput();
+            return redirect()
+                ->back()
+                ->with('error', 'Gagal memproses penyesuaian: ' . $e->getMessage())
+                ->withInput();
         }
     }
 }
