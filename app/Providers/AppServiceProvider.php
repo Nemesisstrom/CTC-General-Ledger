@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,8 +20,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-            Gate::before(function ($user, $ability) {
-            return $user->hasRole('admin') ? true : null;
+        // Menghubungkan Gate Laravel dengan Spatie Permission
+        Gate::before(function ($user, $ability) {
+            return $user->hasPermissionTo($ability) ? true : null;
         });
     }
 }
