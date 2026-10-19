@@ -20,7 +20,7 @@
                 <a href="{{ route('dashboard') }}" class="flex items-center px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition">
                     Dashboard
                 </a>
-                <a href="{{ route('users.index') }}" class="flex items-center px-4 py-3 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm">
+                <a href="{{ route('admin.users.index') }}" class="flex items-center px-4 py-3 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm">
                     Manajemen User
                 </a>
             </nav>
@@ -93,7 +93,7 @@
                                         Edit
                                     </button>
                                     @if(auth()->id() !== $user->id)
-                                        <form action="{{ route('users.destroy', $user->id) }}" method="POST" class="inline" onsubmit="return confirm('Yakin ingin menghapus user ini?')">
+                                        <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="inline" onsubmit="return confirm('Yakin ingin menghapus user ini?')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="text-red-600 hover:text-red-800 font-medium text-xs">
@@ -118,7 +118,7 @@
     <div x-show="openCreateModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" x-cloak>
         <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6" @click.away="openCreateModal = false">
             <h3 class="text-lg font-bold text-gray-800 mb-4">Tambah User Baru</h3>
-            <form action="{{ route('users.store') }}" method="POST" class="space-y-4">
+            <form action="{{ route('admin.users.store') }}" method="POST" class="space-y-4">
                 @csrf
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1">Nama Lengkap</label>

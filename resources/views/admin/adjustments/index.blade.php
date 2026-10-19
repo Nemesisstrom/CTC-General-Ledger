@@ -34,7 +34,7 @@
             <!-- Form Input Penyesuaian -->
             <div class="bg-white p-6 rounded-xl shadow-sm h-fit space-y-4">
                 <h2 class="text-lg font-bold text-gray-800">Input Penyesuaian Baru</h2>
-                <form action="{{ route('adjustments.store') }}" method="POST" class="space-y-4">
+                <form action="{{ route('admin.adjustments.store') }}" method="POST" class="space-y-4">
                     @csrf
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Penyesuaian</label>

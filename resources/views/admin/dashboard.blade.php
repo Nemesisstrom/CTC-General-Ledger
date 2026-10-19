@@ -13,8 +13,8 @@
 <body class="bg-gray-100 min-h-screen flex flex-col lg:flex-row" x-data="{ sidebarOpen: false }">
 
     <!-- OVERLAY BACKDROP (Khusus Layar Mobile) -->
-    <div x-show="sidebarOpen" 
-         @click="sidebarOpen = false" 
+    <div x-show="sidebarOpen"
+         @click="sidebarOpen = false"
          x-cloak
          x-transition:enter="transition-opacity ease-linear duration-300"
          x-transition:enter-start="opacity-0"
@@ -45,7 +45,7 @@
             <!-- Nav Links -->
             <nav class="px-4 py-6 space-y-1 overflow-y-auto max-h-[calc(100vh-140px)]">
                 <!-- Dashboard (Semua Role) -->
-                <a href="{{ route('admin.dashboard') }}" class="flex items-center px-4 py-3 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm">
+                <a href="{{ route('dashboard') }}" class="flex items-center px-4 py-3 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm">
                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 00-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 00-1 1m-6 0h6"/></svg>
                     Dashboard
                 </a>
@@ -66,7 +66,7 @@
                 <!-- ADMIN & AKUNTAN -->
                 @hasanyrole('admin|akuntan')
                     <div class="pt-4 pb-1 px-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Akuntansi & Transaksi</div>
-                    
+
                     @can('manage-journals')
                     <a href="{{ route('admin.journals.index') }}" class="flex items-center px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition">
                         <svg class="w-5 h-5 mr-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -98,7 +98,7 @@
 
                 <!-- OPERASIONAL (STAFF, AKUNTAN, ADMIN) -->
                 <div class="pt-4 pb-1 px-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Operasional</div>
-                
+
                 @can('manage-cash-transactions')
                 <a href="{{ route('admin.cash-transactions.index') }}" class="flex items-center px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition">
                     <svg class="w-5 h-5 mr-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
@@ -116,7 +116,7 @@
                 <!-- LAPORAN KEUANGAN -->
                 @hasanyrole('admin|akuntan')
                     <div class="pt-4 pb-1 px-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Laporan Keuangan</div>
-                    
+
                     @can('view-reports-general-ledger')
                     <a href="{{ route('admin.reports.general-ledger') }}" class="flex items-center px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition">
                         <svg class="w-5 h-5 mr-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>

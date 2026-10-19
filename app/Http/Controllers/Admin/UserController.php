@@ -41,7 +41,7 @@ class UserController extends Controller
         // Assign Role Spatie
         $user->assignRole($request->role);
 
-        return redirect()->route('users.index')->with('success', 'User berhasil ditambahkan.');
+        return redirect()->route('admin.users.index')->with('success', 'User berhasil ditambahkan.');
     }
 
     public function update(Request $request, $id)
@@ -74,7 +74,7 @@ class UserController extends Controller
         // Sync Spatie Role
         $user->syncRoles([$request->role]);
 
-        return redirect()->route('users.index')->with('success', 'Data user berhasil diperbarui.');
+        return redirect()->route('admin.users.index')->with('success', 'Data user berhasil diperbarui.');
     }
 
     public function destroy($id)
@@ -82,11 +82,11 @@ class UserController extends Controller
         $user = User::findOrFail($id);
 
         if (auth()->id() === $user->id) {
-            return redirect()->route('users.index')->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
+            return redirect()->route('admin.users.index')->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
         }
 
         $user->delete();
 
-        return redirect()->route('users.index')->with('success', 'User berhasil dihapus.');
+        return redirect()->route('admin.users.index')->with('success', 'User berhasil dihapus.');
     }
 }

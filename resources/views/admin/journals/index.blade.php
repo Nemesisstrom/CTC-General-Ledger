@@ -37,7 +37,7 @@
             <!-- Form Input Jurnal Manual -->
             <div class="bg-white p-6 rounded-xl shadow-sm h-fit space-y-4">
                 <h2 class="text-lg font-bold text-gray-800">Buat Jurnal Manual</h2>
-                <form action="{{ route('journals.store') }}" method="POST" class="space-y-4">
+                <form action="{{ route('admin.journals.store') }}" method="POST" class="space-y-4">
                     @csrf
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Jurnal</label>
@@ -112,7 +112,7 @@
                                 </div>
 
                                 @if($j->status === 'posted')
-                                    <form action="{{ route('journals.reverse', $j->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin melakukan Reversal / Pembatalan pada jurnal ini?');">
+                                    <form action="{{ route('admin.journals.reverse', $j->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin melakukan Reversal / Pembatalan pada jurnal ini?');">
                                         @csrf
                                         <button type="submit" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs px-2.5 py-1 rounded-lg font-medium transition">
                                             🔄 Reverse / Batal

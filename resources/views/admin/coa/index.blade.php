@@ -28,7 +28,7 @@
             <!-- Form Tambah Akun -->
             <div class="bg-white p-6 rounded-xl shadow-sm h-fit">
                 <h2 class="text-lg font-bold text-gray-800 mb-4">Tambah Akun Baru</h2>
-                <form action="{{ route('chart-of-accounts.store') }}" method="POST" class="space-y-4">
+                <form action="{{ route('admin.chart-of-accounts.store') }}" method="POST" class="space-y-4">
                     @csrf
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Kode Akun</label>
@@ -99,7 +99,7 @@
                                     </td>
                                     <td class="py-3 px-4 font-medium text-xs uppercase">{{ $acc->normal_balance }}</td>
                                     <td class="py-3 px-4 text-center">
-                                        <form action="{{ route('chart-of-accounts.destroy', $acc->id) }}" method="POST" onsubmit="return confirm('Hapus akun ini?');">
+                                        <form action="{{ route('admin.chart-of-accounts.destroy', $acc->id) }}" method="POST" onsubmit="return confirm('Hapus akun ini?');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="text-red-600 hover:underline text-xs font-semibold">Hapus</button>

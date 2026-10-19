@@ -17,7 +17,7 @@
 
         <!-- Toolbar Filter (No Print) -->
         <div class="no-print bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
-            <form action="{{ route('reports.general-ledger') }}" method="GET" class="flex items-center gap-3 flex-wrap">
+            <form action="{{ route('admin.reports.general-ledger') }}" method="GET" class="flex items-center gap-3 flex-wrap">
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Pilih Akun COA</label>
                     <select name="account_id" required class="px-3 py-1.5 border rounded-lg text-sm outline-none">

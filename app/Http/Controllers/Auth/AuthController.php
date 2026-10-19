@@ -52,6 +52,9 @@ class AuthController extends Controller
 
             $request->session()->regenerate();
 
+            // Pemicu event pendaftaran internal menggunakan helper event() bawaan
+            event(new Registered($user));
+
             return redirect()->route('dashboard')->with('success', 'Selamat datang kembali!');
         }
 
@@ -62,7 +65,6 @@ class AuthController extends Controller
 
     public function registerWeb(RegisterRequest $request)
     {
-        // 1. Buat User Baru
         $user = User::create([
             'name'        => $request->name,
             'email'       => $request->email,
@@ -72,17 +74,14 @@ class AuthController extends Controller
             'is_active'   => true,
         ]);
 
-        // 2. Assign Role Spatie
         $user->assignRole(strtolower($request->role));
 
-        // 3. Trigger event pengiriman email verifikasi
+        // Menggunakan helper event() standar (bukan broadcast())
         event(new Registered($user));
 
-        // 4. Otomatis Login User & Regenerasi Session
         Auth::login($user);
         $request->session()->regenerate();
 
-        // 5. Redirect ke Halaman Pemberitahuan Verifikasi Email
         return redirect()->route('verification.notice')
             ->with('success', 'Registrasi berhasil! Silakan cek email Anda untuk verifikasi akun.');
     }
@@ -136,7 +135,6 @@ class AuthController extends Controller
 
         $user->assignRole(strtolower($request->role));
 
-        // Send Email Verification via API
         event(new Registered($user));
 
         $token = $user->createToken('auth_token')->plainTextToken;

@@ -7,7 +7,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\PasswordResetController;
 
-// Admin Controllers
+// Admin Controllers (Termasuk DashboardController dari folder Admin)
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ChartOfAccountController;
@@ -60,6 +60,11 @@ Route::middleware('guest')->group(function () {
 // ==========================================
 Route::middleware('auth')->group(function () {
 
+    // Dashboard Utama (Di luar prefix /admin, nama route: dashboard)
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->middleware(['verified', 'role:admin|akuntan|staff'])
+        ->name('dashboard');
+
     // Logout
     Route::post('/logout', [AuthController::class, 'logoutWeb'])->name('logout');
 
@@ -76,11 +81,6 @@ Route::middleware('auth')->group(function () {
     // Panel Admin & Operasional (Prefix: /admin)
     // ==========================================
     Route::prefix('admin')->name('admin.')->group(function () {
-
-    // Dashboard
-     Route::get('/dashboard', [DashboardController::class, 'index'])
-        ->middleware(['verified', 'role:admin|akuntan|staff'])
-        ->name('dashboard');
 
         // Khusus Admin (Manajemen User & COA)
         Route::middleware('role:admin')->group(function () {

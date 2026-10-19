@@ -34,7 +34,7 @@
             <!-- Form Input Transaksi -->
             <div class="bg-white p-6 rounded-xl shadow-sm h-fit">
                 <h2 class="text-lg font-bold text-gray-800 mb-4">Input Transaksi Baru</h2>
-                <form action="{{ route('cash-transactions.store') }}" method="POST" class="space-y-4">
+                <form action="{{ route('admin.cash-transactions.store') }}" method="POST" class="space-y-4">
                     @csrf
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Transaksi</label>

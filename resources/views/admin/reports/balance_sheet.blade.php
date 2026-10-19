@@ -17,7 +17,7 @@
 
         <!-- Toolbar Filter & Action (No Print) -->
         <div class="no-print bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
-            <form action="{{ route('reports.balance-sheet') }}" method="GET" class="flex items-center gap-3">
+            <form action="{{ route('admin.reports.balance-sheet') }}" method="GET" class="flex items-center gap-3">
                 <label class="text-sm font-medium text-gray-700">Per Tanggal:</label>
                 <input type="date" name="as_of_date" value="{{ $reportData['as_of_date'] }}" class="px-3 py-1.5 border rounded-lg text-sm outline-none">
                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded-lg transition">Tampilkan</button>

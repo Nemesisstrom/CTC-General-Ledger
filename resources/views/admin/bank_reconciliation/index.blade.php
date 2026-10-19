@@ -28,7 +28,7 @@
             <!-- Form Input Rekonsiliasi -->
             <div class="bg-white p-6 rounded-xl shadow-sm h-fit space-y-4">
                 <h2 class="text-lg font-bold text-gray-800">Proses Rekonsiliasi Baru</h2>
-                <form action="{{ route('bank-reconciliations.store') }}" method="POST" class="space-y-4">
+                <form action="{{ route('admin.bank-reconciliations.store') }}" method="POST" class="space-y-4">
                     @csrf
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Akun Rekening Bank</label>

@@ -17,7 +17,7 @@
 
         <!-- Toolbar Filter & Action (No Print) -->
         <div class="no-print bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
-            <form action="{{ route('reports.profit-loss') }}" method="GET" class="flex items-center gap-2 flex-wrap">
+            <form action="{{ route('admin.reports.profit-loss') }}" method="GET" class="flex items-center gap-2 flex-wrap">
                 <span class="text-sm font-medium text-gray-700">Periode:</span>
                 <input type="date" name="start_date" value="{{ $reportData['start_date'] }}" class="px-3 py-1.5 border rounded-lg text-sm outline-none">
                 <span class="text-sm text-gray-500">s/d</span>

@@ -34,7 +34,7 @@
             <!-- Form Kalkulator Transaksi Pajak -->
             <div class="bg-white p-6 rounded-xl shadow-sm h-fit space-y-4">
                 <h2 class="text-lg font-bold text-gray-800">Proses Pajak Transaksi</h2>
-                <form action="{{ route('taxes.process') }}" method="POST" class="space-y-4">
+                <form action="{{ route('admin.taxes.process') }}" method="POST" class="space-y-4">
                     @csrf
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Transaksi</label>

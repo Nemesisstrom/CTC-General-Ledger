@@ -18,7 +18,7 @@
 
         <!-- Toolbar Filter & Ekspor (No Print) -->
         <div class="no-print bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
-            <form action="{{ route('reports.tax') }}" method="GET" class="flex items-center gap-3 flex-wrap">
+            <form action="{{ route('admin.reports.tax') }}" method="GET" class="flex items-center gap-3 flex-wrap">
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter Skema Pajak</label>
                     <select name="tax_id" class="px-3 py-1.5 border rounded-lg text-sm outline-none bg-white">
@@ -50,12 +50,12 @@
 
             <div class="flex items-center gap-2 self-end flex-wrap">
                 <!-- Export PDF -->
-                <a href="{{ route('reports.tax.pdf', request()->query()) }}" class="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1">
+                <a href="{{ route('admin.reports.tax.pdf', request()->query()) }}" class="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1">
                     📄 Export PDF
                 </a>
-                
+
                 <!-- Export Excel -->
-                <a href="{{ route('reports.tax.excel', request()->query()) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1">
+                <a href="{{ route('admin.reports.tax.excel', request()->query()) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1">
                     📊 Export Excel
                 </a>
 

@@ -34,7 +34,7 @@
             <!-- Form Process Payroll -->
             <div class="bg-white p-6 rounded-xl shadow-sm h-fit space-y-4">
                 <h2 class="text-lg font-bold text-gray-800">Proses Gaji Baru</h2>
-                <form action="{{ route('payrolls.store') }}" method="POST" class="space-y-4">
+                <form action="{{ route('admin.payrolls.store') }}" method="POST" class="space-y-4">
                     @csrf
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Karyawan</label>
@@ -113,7 +113,7 @@
             <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm space-y-4">
                 <div class="flex justify-between items-center">
                     <h2 class="text-lg font-bold text-gray-800">Daftar Gaji Periode {{ $period }}</h2>
-                    <form action="{{ route('payrolls.index') }}" method="GET">
+                    <form action="{{ route('admin.payrolls.index') }}" method="GET">
                         <input type="month" name="period" value="{{ $period }}" onchange="this.form.submit()" class="px-3 py-1 border rounded-lg text-xs outline-none">
                     </form>
                 </div>
