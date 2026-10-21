@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\JournalDetail;
+use Illuminate\Support\Enumerable;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -13,31 +14,37 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class TaxReportExport implements FromCollection, WithHeadings, WithMapping, WithTitle, ShouldAutoSize, WithStyles
 {
+    protected $taxId;
     protected $startDate;
     protected $endDate;
     protected $rowNumber = 0;
 
-    public function __construct($startDate = null, $endDate = null)
+    public function __construct($taxId = null, $startDate = null,$endDate = null)
     {
-        $this->startDate = $startDate;
-        $this->endDate = $endDate;
+        $this->taxId =$taxId;
+        $this->startDate =$startDate;
+        $this->endDate =$endDate;
     }
 
     /**
-     * mengambil koleksi detail jurnal yang memiliki rincian pajak
+     * Mengambil koleksi detail jurnal yang memiliki rincian pajak
      */
-    public function collection()
+    public function collection(): Enumerable
     {
         $query = JournalDetail::with(['journal', 'account', 'tax'])
             ->whereNotNull('tax_id');
 
-        if ($this->startDate && $this->endDate) {
-            $query->whereHas('journal', function ($q) {
-                $q->whereBetween('journal_date', [$this->startDate, $this->endDate]);
+        if ($this->startDate && $this->endDate) {$query->whereHas('journal', function ($q) {$q->whereBetween('journal_date', [$this->startDate,$this->endDate]);
             });
         }
 
-        return $query->get();
+        if ($this->taxId) {
+            $query->where('tax_id',$this->taxId);
+        }
+
+        return $query->get()->sortBy(function ($entry) {
+            return $entry->journal->journal_date ?? $entry->created_at;
+        })->values();
     }
 
     /**
@@ -73,11 +80,10 @@ class TaxReportExport implements FromCollection, WithHeadings, WithMapping, With
         $this->rowNumber++;
 
         // Menentukan nilai pajak berdasarkan nominal Debit atau Kredit
-        $taxAmount = $detail->debit > 0 ? $detail->debit : $detail->credit;
+        $taxAmount =$detail->debit > 0 ? $detail->debit :$detail->credit;
 
         return [
-            $this->rowNumber,
-            $detail->journal->journal_date ?? '-',
+            $this->rowNumber,$detail->journal->journal_date ?? '-',
             $detail->journal->journal_number ?? '-',
             $detail->tax->name ?? 'Pajak',
             $detail->account->code ?? '-',
@@ -89,8 +95,9 @@ class TaxReportExport implements FromCollection, WithHeadings, WithMapping, With
 
     /**
      * Styling tampilan Excel (Bold Header)
+     * Ditambahkan return type hint `: array` agar kompatibel dengan interface WithStyles
      */
-    public function styles(Worksheet $sheet)
+    public function styles(Worksheet $sheet): array
     {
         return [
             // Baris 1 (Heading) dibuat Bold

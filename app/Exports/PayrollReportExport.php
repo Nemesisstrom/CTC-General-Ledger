@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\Payroll;
+use Illuminate\Support\Enumerable;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -24,7 +25,7 @@ class PayrollReportExport implements FromCollection, WithHeadings, WithMapping, 
     /**
      * Mengambil koleksi data penggajian berdasarkan periode (format YYYY-MM)
      */
-    public function collection()
+    public function collection(): Enumerable
     {
         $query = Payroll::with('user')->orderBy('id', 'desc');
 
@@ -86,7 +87,7 @@ class PayrollReportExport implements FromCollection, WithHeadings, WithMapping, 
     /**
      * Styling Tampilan Header Excel (Bold)
      */
-    public function styles(Worksheet $sheet)
+    public function styles(Worksheet $sheet): array
     {
         return [
             1 => ['font' => ['bold' => true]],

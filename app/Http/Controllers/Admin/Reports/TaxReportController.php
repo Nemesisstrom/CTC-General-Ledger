@@ -47,7 +47,10 @@ class TaxReportController extends Controller
             $query->where('tax_id', $taxId);
         }
 
-        $taxEntries = $query->get()->sortBy(fn ($entry) => $entry->journal->journal_date ?? $entry->created_at);
+        // Ambil data dan urutkan berdasarkan tanggal jurnal dengan aman
+        $taxEntries = $query->get()->sortBy(function ($entry) {
+            return $entry->journal->journal_date ?? $entry->created_at;
+        })->values();
 
         // Kalkulasi Total Pungutan/Pemotongan Pajak
         $totalTaxAmount = $taxEntries->sum(function ($entry) {
@@ -75,18 +78,23 @@ class TaxReportController extends Controller
         }
 
         $pdf = Pdf::loadView('admin.reports.pdf.tax_report', compact('reportData'));
-        return $pdf->download('Laporan_Rekapitulasi_Pajak_' . date('Ymd') . '.pdf');
+        return $pdf->download('Laporan_Rekapitulasi_Pajak_' . date('Ymd_His') . '.pdf');
     }
 
     public function exportExcel(Request $request)
     {
-        $taxId     = $request->input('tax_id');
-        $startDate = $request->input('start_date', date('Y-m-01'));
-        $endDate   = $request->input('end_date', date('Y-m-t'));
+        $reportData = $this->generateReportData($request);
+
+        // Validasi jika data transaksi kosong sebelum melakukan ekspor Excel
+        if ($reportData['tax_entries']->isEmpty()) {
+            return redirect()
+                ->back()
+                ->with('error', 'Tidak ditemukan data transaksi pajak pada periode tersebut untuk diekspor.');
+        }
 
         return Excel::download(
-            new TaxReportExport($taxId, $startDate, $endDate),
-            'Laporan_Rekapitulasi_Pajak_' . date('Ymd') . '.xlsx'
+            new TaxReportExport($reportData['tax_id'], $reportData['start_date'], $reportData['end_date']),
+            'Laporan_Rekapitulasi_Pajak_' . date('Ymd_His') . '.xlsx'
         );
     }
 }

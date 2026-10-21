@@ -15,19 +15,16 @@ class AdjustmentController extends Controller
 {
     public function index(Request $request)
     {
-        // Ambil daftar jurnal penyesuaian (ditandai prefix ADJ)
         $adjustments = Journal::with(['details.account', 'creator'])
             ->where('journal_number', 'LIKE', 'ADJ-%')
             ->orderBy('journal_date', 'desc')
             ->orderBy('id', 'desc')
             ->paginate(15);
 
-        // Akun Beban (Expense) untuk Debit
         $expenseAccounts = ChartOfAccount::where('type', 'expense')
             ->where('is_active', true)
             ->get();
 
-        // Akun Akumulasi Penyusutan / Kewajiban / Aset untuk Kredit
         $accumulatedAccounts = ChartOfAccount::whereIn('type', ['asset', 'liability', 'equity'])
             ->where('is_active', true)
             ->get();
@@ -43,11 +40,9 @@ class AdjustmentController extends Controller
     {
         DB::beginTransaction();
         try {
-            // Generasi nomor jurnal penyesuaian berbasis ID terakhir agar aman dari duplikasi
             $nextId = (Journal::max('id') ?? 0) + 1;
             $journalNumber = 'ADJ-' . date('Ym') . '-' . sprintf('%04d', $nextId);
 
-            // 1. Simpan Header Jurnal Penyesuaian
             $journal = Journal::create([
                 'journal_number'   => $journalNumber,
                 'journal_date'     => $request->adjustment_date,
@@ -57,7 +52,6 @@ class AdjustmentController extends Controller
                 'created_by'       => auth()->id(),
             ]);
 
-            // 2. Debit: Beban (misal: Beban Penyusutan Peralatan)
             JournalDetail::create([
                 'journal_id' => $journal->id,
                 'account_id' => $request->expense_account_id,
@@ -66,7 +60,6 @@ class AdjustmentController extends Controller
                 'memo'       => 'Penyesuaian: ' . $request->description,
             ]);
 
-            // 3. Kredit: Akumulasi Penyusutan / Kontra Aset / Kewajiban
             JournalDetail::create([
                 'journal_id' => $journal->id,
                 'account_id' => $request->accumulated_account_id,
@@ -77,27 +70,83 @@ class AdjustmentController extends Controller
 
             DB::commit();
 
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'message' => 'Jurnal penyesuaian berhasil disimpan dan diposting',
-                    'data'    => $journal->load('details'),
-                ], 201);
-            }
-
             return redirect()
                 ->route('admin.adjustments.index')
                 ->with('success', 'Jurnal penyesuaian ' . $journalNumber . ' berhasil diposting.');
         } catch (Exception $e) {
             DB::rollBack();
+            return redirect()->back()->with('error', 'Gagal memproses penyesuaian: ' . $e->getMessage())->withInput();
+        }
+    }
 
-            if ($request->wantsJson()) {
-                return response()->json(['error' => 'Gagal memproses penyesuaian: ' . $e->getMessage()], 500);
+    /**
+     * Membatalkan / Reversal Jurnal Penyesuaian
+     */
+    public function reverse($id)
+    {
+        $original = Journal::with('details')->findOrFail($id);
+
+        if ($original->status === 'reversed') {
+            return redirect()->back()->with('error', 'Jurnal ini sudah pernah dibatalkan.');
+        }
+
+        DB::beginTransaction();
+        try {
+            $reversalNumber = 'REV-' . $original->journal_number;
+
+            $reversal = Journal::create([
+                'journal_number'   => $reversalNumber,
+                'journal_date'     => now()->toDateString(),
+                'reference_number' => $original->journal_number,
+                'description'      => '[PEMBATALAN] ' . $original->description,
+                'status'           => 'posted',
+                'created_by'       => auth()->id(),
+            ]);
+
+            foreach ($original->details as $detail) {
+                JournalDetail::create([
+                    'journal_id' => $reversal->id,
+                    'account_id' => $detail->account_id,
+                    'debit'      => $detail->credit, // Tukar Debit & Kredit
+                    'credit'     => $detail->debit,
+                    'memo'       => 'Pembalik otomatis ' . $original->journal_number,
+                ]);
             }
 
+            $original->update(['status' => 'reversed']);
+
+            DB::commit();
+
             return redirect()
-                ->back()
-                ->with('error', 'Gagal memproses penyesuaian: ' . $e->getMessage())
-                ->withInput();
+                ->route('admin.adjustments.index')
+                ->with('success', 'Jurnal penyesuaian ' . $original->journal_number . ' berhasil dibatalkan.');
+        } catch (Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Gagal membatalkan jurnal: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Hapus Jurnal Penyesuaian (Hanya jika benar-benar dibutuhkan)
+     */
+    public function destroy($id)
+    {
+        $journal = Journal::findOrFail($id);
+
+        DB::beginTransaction();
+        try {
+            // Hapus detail lalu header
+            $journal->details()->delete();
+            $journal->delete();
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.adjustments.index')
+                ->with('success', 'Data jurnal penyesuaian berhasil dihapus.');
+        } catch (Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Gagal menghapus jurnal: ' . $e->getMessage());
         }
     }
 }

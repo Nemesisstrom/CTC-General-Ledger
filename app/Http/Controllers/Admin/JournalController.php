@@ -15,7 +15,7 @@ class JournalController extends Controller
 {
     public function index(Request $request)
     {
-        $journals = Journal::with(['details.chartOfAccount', 'creator'])
+        $journals = Journal::with(['details.account', 'creator'])
             ->orderBy('journal_date', 'desc')
             ->orderBy('id', 'desc')
             ->paginate(15);
@@ -31,20 +31,15 @@ class JournalController extends Controller
         return view('admin.journals.index', compact('journals', 'accounts'));
     }
 
-    /**
-     * Menyimpan data transaksi jurnal baru.
-     */
     public function store(StoreJournalRequest $request)
     {
         $validated = $request->validated();
 
         DB::beginTransaction();
         try {
-            // Generasi nomor jurnal unik
             $nextId = (Journal::max('id') ?? 0) + 1;
             $journalNumber = 'JRN-' . date('Ym') . '-' . sprintf('%04d', $nextId);
 
-            // 1. Simpan Header Jurnal
             $journal = Journal::create([
                 'journal_number'   => $journalNumber,
                 'journal_date'     => $validated['transaction_date'] ?? $validated['journal_date'],
@@ -54,13 +49,12 @@ class JournalController extends Controller
                 'created_by'       => auth()->id(),
             ]);
 
-            // 2. Simpan Detail Jurnal
             foreach ($validated['items'] as $item) {
                 $journal->details()->create([
-                    'chart_of_account_id' => $item['chart_of_account_id'] ?? $item['account_id'],
-                    'debit'               => $item['debit'],
-                    'credit'              => $item['credit'],
-                    'memo'                => $item['memo'] ?? null,
+                    'account_id' => $item['account_id'] ?? $item['chart_of_account_id'], // DIPERBAIKI: account_id
+                    'debit'      => $item['debit'],
+                    'credit'     => $item['credit'],
+                    'memo'       => $item['memo'] ?? null,
                 ]);
             }
 
@@ -90,9 +84,6 @@ class JournalController extends Controller
         }
     }
 
-    /**
-     * Membalikkan Jurnal (Reversal Journal Entry)
-     */
     public function reverse(Request $request, $id)
     {
         $originalJournal = Journal::with('details')->findOrFail($id);
@@ -117,18 +108,16 @@ class JournalController extends Controller
                 'created_by'       => auth()->id(),
             ]);
 
-            // Pembalikan Otomatis: Debit jadi Kredit, Kredit jadi Debit
             foreach ($originalJournal->details as $detail) {
                 JournalDetail::create([
-                    'journal_id'          => $reversalJournal->id,
-                    'chart_of_account_id' => $detail->chart_of_account_id ?? $detail->account_id,
-                    'debit'               => $detail->credit, // Tukar Posisi
-                    'credit'              => $detail->debit,  // Tukar Posisi
-                    'memo'                => 'Pembalikan otomatis dari ' . $originalJournal->journal_number,
+                    'journal_id' => $reversalJournal->id,
+                    'account_id' => $detail->account_id ?? $detail->chart_of_account_id, // DIPERBAIKI: account_id
+                    'debit'      => $detail->credit,
+                    'credit'     => $detail->debit,
+                    'memo'       => 'Pembalikan otomatis dari ' . $originalJournal->journal_number,
                 ]);
             }
 
-            // Update status jurnal asli
             $originalJournal->update(['status' => 'reversed']);
 
             DB::commit();

@@ -38,11 +38,11 @@ class PayrollController extends Controller
         }
 
         return view('admin.payroll.index', compact(
-            'payrolls', 
-            'employees', 
-            'period', 
-            'expenseAccounts', 
-            'cashAccounts', 
+            'payrolls',
+            'employees',
+            'period',
+            'expenseAccounts',
+            'cashAccounts',
             'liabilityAccounts'
         ));
     }
@@ -130,47 +130,47 @@ class PayrollController extends Controller
 
             // Debit: Beban Gaji Kotor (Gross Income)
             JournalDetail::create([
-                'journal_id'          => $journal->id,
-                'chart_of_account_id' => $request->salary_expense_account_id,
-                'debit'               => $grossIncome,
-                'credit'              => 0,
-                'memo'                => 'Beban Gaji Kotor ' . $user->name,
+                'journal_id' => $journal->id,
+                'account_id' => $request->salary_expense_account_id, // DIPERBAIKI: Menggunakan account_id
+                'debit'      => $grossIncome,
+                'credit'     => 0,
+                'memo'       => 'Beban Gaji Kotor ' . $user->name,
             ]);
 
             // Kredit: Potongan PPh 21
             if ($pph21Amount > 0) {
                 JournalDetail::create([
-                    'journal_id'          => $journal->id,
-                    'chart_of_account_id' => $pphAccountId,
-                    'tax_id'              => $taxPph21?->id,
-                    'debit'               => 0,
-                    'credit'              => $pph21Amount,
-                    'memo'                => 'Utang / Potongan PPh 21 Gaji',
+                    'journal_id' => $journal->id,
+                    'account_id' => $pphAccountId, // DIPERBAIKI: Menggunakan account_id
+                    'tax_id'     => $taxPph21?->id,
+                    'debit'      => 0,
+                    'credit'     => $pph21Amount,
+                    'memo'       => 'Utang / Potongan PPh 21 Gaji',
                 ]);
             }
 
             // Kredit: Potongan Lainnya (Jika Ada)
             if ($totalDeduction > 0 && $request->deduction_account_id) {
                 JournalDetail::create([
-                    'journal_id'          => $journal->id,
-                    'chart_of_account_id' => $request->deduction_account_id,
-                    'debit'               => 0,
-                    'credit'              => $totalDeduction,
-                    'memo'                => 'Potongan Gaji Non-Pajak ' . $user->name,
+                    'journal_id' => $journal->id,
+                    'account_id' => $request->deduction_account_id, // DIPERBAIKI: Menggunakan account_id
+                    'debit'      => 0,
+                    'credit'     => $totalDeduction,
+                    'memo'       => 'Potongan Gaji Non-Pajak ' . $user->name,
                 ]);
             }
 
             // Kredit: Kas/Bank (Gaji Bersih Diterima Karyawan)
-            $cashCreditAmount = ($totalDeduction > 0 && !$request->deduction_account_id) 
-                ? ($netSalary + $totalDeduction) 
+            $cashCreditAmount = ($totalDeduction > 0 && !$request->deduction_account_id)
+                ? ($netSalary + $totalDeduction)
                 : $netSalary;
 
             JournalDetail::create([
-                'journal_id'          => $journal->id,
-                'chart_of_account_id' => $request->cash_account_id,
-                'debit'               => 0,
-                'credit'              => $cashCreditAmount,
-                'memo'                => 'Pembayaran Gaji Bersih ' . $user->name,
+                'journal_id' => $journal->id,
+                'account_id' => $request->cash_account_id, // DIPERBAIKI: Menggunakan account_id
+                'debit'      => 0,
+                'credit'     => $cashCreditAmount,
+                'memo'       => 'Pembayaran Gaji Bersih ' . $user->name,
             ]);
 
             DB::commit();
@@ -200,9 +200,6 @@ class PayrollController extends Controller
         }
     }
 
-    /**
-     * Logika Kalkulasi PPh 21 Sederhana (Aturan Progresif / TER)
-     */
     private function calculatePPh21(float $grossIncome): float
     {
         if ($grossIncome > 5000000) {

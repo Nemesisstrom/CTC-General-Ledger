@@ -23,7 +23,7 @@
                     <select name="account_id" required class="px-3 py-1.5 border rounded-lg text-sm outline-none">
                         <option value="">-- Pilih Akun --</option>
                         @foreach($accounts as $acc)
-                            <option value="{{ $acc->id }}" {{ $reportData['account_id'] == $acc->id ? 'selected' : '' }}>
+                            <option value="{{ $acc->id }}" {{ ($reportData['account_id'] ?? null) == $acc->id ? 'selected' : '' }}>
                                 {{ $acc->code }} - {{ $acc->name }} ({{ strtoupper($acc->normal_balance) }})
                             </option>
                         @endforeach
@@ -32,12 +32,12 @@
 
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Dari Tanggal</label>
-                    <input type="date" name="start_date" value="{{ $reportData['start_date'] }}" class="px-3 py-1.5 border rounded-lg text-sm outline-none">
+                    <input type="date" name="start_date" value="{{ $reportData['start_date'] ?? date('Y-m-01') }}" class="px-3 py-1.5 border rounded-lg text-sm outline-none">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Sampai Tanggal</label>
-                    <input type="date" name="end_date" value="{{ $reportData['end_date'] }}" class="px-3 py-1.5 border rounded-lg text-sm outline-none">
+                    <input type="date" name="end_date" value="{{ $reportData['end_date'] ?? date('Y-m-t') }}" class="px-3 py-1.5 border rounded-lg text-sm outline-none">
                 </div>
 
                 <div class="self-end">
@@ -46,7 +46,7 @@
             </form>
 
             <div class="flex items-center gap-2 self-end">
-                @if($reportData['selected_account'])
+                @if(!empty($reportData['selected_account']))
                     <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white text-sm px-4 py-1.5 rounded-lg transition">
                         🖨️ Cetak PDF
                     </button>
@@ -58,7 +58,7 @@
         </div>
 
         <!-- Document Sheet -->
-        @if($reportData['selected_account'])
+        @if(!empty($reportData['selected_account']))
             <div class="bg-white p-8 rounded-xl shadow-sm space-y-6">
 
                 <!-- Header Dokumen -->
@@ -89,20 +89,20 @@
                         <tbody class="divide-y divide-gray-100">
                             <!-- Row Saldo Awal -->
                             <tr class="bg-gray-50 font-semibold">
-                                <td class="py-2.5 px-3">{{ $reportData['start_date'] }}</td>
+                                <td class="py-2.5 px-3">{{ date('d/m/Y', strtotime($reportData['start_date'])) }}</td>
                                 <td class="py-2.5 px-3">-</td>
                                 <td class="py-2.5 px-3">SALDO AWAL PERIODE</td>
                                 <td class="py-2.5 px-3 text-right">-</td>
                                 <td class="py-2.5 px-3 text-right">-</td>
-                                <td class="py-2.5 px-3 text-right">Rp {{ number_format($reportData['opening_balance'], 0, ',', '.') }}</td>
+                                <td class="py-2.5 px-3 text-right">Rp {{ number_format($reportData['opening_balance'] ?? 0, 0, ',', '.') }}</td>
                             </tr>
 
-                            <!-- Detail Transaksi -->
-                            @forelse($reportData['ledger_entries'] as $entry)
+                            <!-- Detail Transaksi (DIPERBAIKI: Menggunakan $reportData['entries']) -->
+                            @forelse($reportData['entries'] as $entry)
                                 <tr class="hover:bg-gray-50">
-                                    <td class="py-2.5 px-3">{{ $entry->journal->journal_date }}</td>
-                                    <td class="py-2.5 px-3 font-mono text-xs">{{ $entry->journal->journal_number }}</td>
-                                    <td class="py-2.5 px-3 text-gray-600">{{ $entry->memo ?? $entry->journal->description }}</td>
+                                    <td class="py-2.5 px-3">{{ $entry->journal->journal_date ? date('d/m/Y', strtotime($entry->journal->journal_date)) : '-' }}</td>
+                                    <td class="py-2.5 px-3 font-mono text-xs">{{ $entry->journal->journal_number ?? '-' }}</td>
+                                    <td class="py-2.5 px-3 text-gray-600">{{ $entry->memo ?? $entry->journal->description ?? '-' }}</td>
                                     <td class="py-2.5 px-3 text-right">
                                         {{ $entry->debit > 0 ? 'Rp ' . number_format($entry->debit, 0, ',', '.') : '-' }}
                                     </td>
@@ -110,7 +110,7 @@
                                         {{ $entry->credit > 0 ? 'Rp ' . number_format($entry->credit, 0, ',', '.') : '-' }}
                                     </td>
                                     <td class="py-2.5 px-3 text-right font-medium">
-                                        Rp {{ number_format($entry->running_balance, 0, ',', '.') }}
+                                        Rp {{ number_format($entry->running_balance ?? 0, 0, ',', '.') }}
                                     </td>
                                 </tr>
                             @empty
@@ -122,9 +122,15 @@
                         <tfoot>
                             <tr class="border-t-2 border-gray-800 font-bold bg-gray-50 text-gray-900">
                                 <td colspan="3" class="py-3 px-3 text-right uppercase">Total Mutasi & Saldo Akhir:</td>
-                                <td class="py-3 px-3 text-right text-green-700">Rp {{ number_format($reportData['total_debit'], 0, ',', '.') }}</td>
-                                <td class="py-3 px-3 text-right text-red-700">Rp {{ number_format($reportData['total_credit'], 0, ',', '.') }}</td>
-                                <td class="py-3 px-3 text-right text-blue-700 bg-blue-50">Rp {{ number_format($reportData['ending_balance'], 0, ',', '.') }}</td>
+                                <td class="py-3 px-3 text-right text-green-700">
+                                    Rp {{ number_format($reportData['entries']->sum('debit') ?? 0, 0, ',', '.') }}
+                                </td>
+                                <td class="py-3 px-3 text-right text-red-700">
+                                    Rp {{ number_format($reportData['entries']->sum('credit') ?? 0, 0, ',', '.') }}
+                                </td>
+                                <td class="py-3 px-3 text-right text-blue-700 bg-blue-50">
+                                    Rp {{ number_format($reportData['ending_balance'] ?? 0, 0, ',', '.') }}
+                                </td>
                             </tr>
                         </tfoot>
                     </table>

@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateJournalRequest extends FormRequest
 {
@@ -14,21 +13,16 @@ class UpdateJournalRequest extends FormRequest
 
     public function rules(): array
     {
-        $journalId = $this->route('journal') ? $this->route('journal')->id : $this->input('id');
-
         return [
-            'transaction_date' => ['required', 'date'],
-            'reference_number' => [
-                'required',
-                'string',
-                'max:50',
-                Rule::unique('journals', 'reference_number')->ignore($journalId),
-            ],
-            'description'      => ['nullable', 'string', 'max:255'],
+            'journal_date'     => ['required_without:transaction_date', 'nullable', 'date'],
+            'transaction_date' => ['required_without:journal_date', 'nullable', 'date'],
+            'reference_number' => ['nullable', 'string', 'max:50'],
+            'description'      => ['required', 'string', 'max:255'],
             'items'            => ['required', 'array', 'min:2'],
-            'items.*.chart_of_account_id' => ['required', 'exists:chart_of_accounts,id'],
-            'items.*.debit'    => ['required', 'numeric', 'min:0'],
-            'items.*.credit'   => ['required', 'numeric', 'min:0'],
+            'items.*.account_id'          => ['required_without:items.*.chart_of_account_id', 'nullable', 'exists:chart_of_accounts,id'],
+            'items.*.chart_of_account_id' => ['required_without:items.*.account_id', 'nullable', 'exists:chart_of_accounts,id'],
+            'items.*.debit'               => ['required', 'numeric', 'min:0'],
+            'items.*.credit'              => ['required', 'numeric', 'min:0'],
         ];
     }
 
@@ -36,15 +30,32 @@ class UpdateJournalRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             $items = $this->input('items', []);
-            $totalDebit = collect($items)->sum('debit');
-            $totalCredit = collect($items)->sum('credit');
+            $totalDebit = collect($items)->sum(fn($i) => (float)($i['debit'] ?? 0));
+            $totalCredit = collect($items)->sum(fn($i) => (float)($i['credit'] ?? 0));
 
-            if (abs($totalDebit - $totalCredit) > 0.0001) {
+            if ($totalDebit <= 0 && $totalCredit <= 0) {
+                $validator->errors()->add('items', 'Nominal transaksi jurnal harus lebih dari 0.');
+                return;
+            }
+
+            if (abs($totalDebit - $totalCredit) > 0.01) {
                 $validator->errors()->add(
                     'items',
-                    'Total Debet (' . number_format($totalDebit, 2) . ') harus sama dengan Total Kredit (' . number_format($totalCredit, 2) . ').'
+                    'Total Debet (Rp ' . number_format($totalDebit, 0, ',', '.') . ') harus seimbang dengan Total Kredit (Rp ' . number_format($totalCredit, 0, ',', '.') . ').'
                 );
             }
         });
+    }
+
+    public function messages(): array
+    {
+        return [
+            'journal_date.required_without' => 'Tanggal jurnal wajib diisi.',
+            'transaction_date.required_without' => 'Tanggal jurnal wajib diisi.',
+            'description.required'          => 'Keterangan jurnal wajib diisi.',
+            'items.required'                => 'Rincian jurnal wajib diisi.',
+            'items.min'                     => 'Jurnal minimal harus memiliki 2 entri (Debet dan Kredit).',
+            'items.*.account_id.required_without' => 'Silakan pilih akun COA untuk setiap baris jurnal.',
+        ];
     }
 }

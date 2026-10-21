@@ -35,4 +35,9 @@ class ChartOfAccount extends Model
     {
         return $this->hasMany(ChartOfAccount::class, 'parent_id')->orderBy('code', 'asc');
     }
+
+    public function journalDetails(): HasMany
+    {
+        return $this->hasMany(JournalDetail::class, 'account_id');
+    }
 }

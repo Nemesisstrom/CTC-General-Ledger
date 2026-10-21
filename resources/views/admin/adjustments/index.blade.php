@@ -83,29 +83,59 @@
 
                 <div class="space-y-3">
                     @forelse($adjustments as $adj)
-                        <div class="border rounded-xl p-4 bg-gray-50/50 space-y-2">
-                            <div class="flex justify-between items-center border-b pb-2">
-                                <span class="font-mono font-bold text-xs text-blue-600">{{ $adj->journal_number }}</span>
-                                <span class="text-xs text-gray-500">{{ $adj->journal_date }}</span>
+                        <div class="border rounded-xl p-4 bg-gray-50/50 space-y-3">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-mono font-bold text-xs text-blue-600">{{ $adj->journal_number }}</span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $adj->status === 'posted' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                        {{ strtoupper($adj->status) }}
+                                    </span>
+                                </div>
+
+                                <div class="flex items-center gap-3 self-end sm:self-auto">
+                                    <span class="text-xs text-gray-500">{{ $adj->journal_date }}</span>
+
+                                    <!-- Tombol Reverse / Batal (Dapat diakses Akuntan & Admin) -->
+                                    @if($adj->status !== 'reversed' && !str_starts_with($adj->journal_number, 'REV-'))
+                                        <form action="{{ route('admin.adjustments.reverse', $adj->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin membatalkan (reverse) jurnal penyesuaian ini?');">
+                                            @csrf
+                                            <button type="submit" class="text-xs bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 px-2 py-1 rounded transition font-medium">
+                                                🔄 Reverse
+                                            </button>
+                                        </form>
+                                    @endif
+
+                                    <!-- Tombol Hapus (HANYA TAMPIL UNTUK ROLE ADMIN) -->
+                                    @role('admin')
+                                        <form action="{{ route('admin.adjustments.destroy', $adj->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus jurnal ini secara permanen?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-xs text-red-600 hover:text-red-800 font-semibold transition">
+                                                Hapus
+                                            </button>
+                                        </form>
+                                    @endrole
+                                </div>
                             </div>
+
                             <p class="text-xs text-gray-700 font-medium">{{ $adj->description }}</p>
 
                             <table class="w-full text-xs text-left bg-white rounded border">
                                 <thead>
                                     <tr class="border-b bg-gray-100 text-gray-500 uppercase">
-                                        <th class="py-1 px-2">Akun</th>
-                                        <th class="py-1 px-2 text-right">Debit</th>
-                                        <th class="py-1 px-2 text-right">Kredit</th>
+                                        <th class="py-1.5 px-2">Akun</th>
+                                        <th class="py-1.5 px-2 text-right">Debit</th>
+                                        <th class="py-1.5 px-2 text-right">Kredit</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y">
                                     @foreach($adj->details as $d)
                                         <tr>
-                                            <td class="py-1 px-2 {{ $d->credit > 0 ? 'pl-6' : '' }}">
-                                                {{ $d->account->code }} - {{ $d->account->name }}
+                                            <td class="py-1.5 px-2 {{ $d->credit > 0 ? 'pl-6' : '' }}">
+                                                {{ $d->account->code ?? $d->chartOfAccount->code ?? '-' }} - {{ $d->account->name ?? $d->chartOfAccount->name ?? '-' }}
                                             </td>
-                                            <td class="py-1 px-2 text-right">{{ $d->debit > 0 ? 'Rp ' . number_format($d->debit, 0, ',', '.') : '-' }}</td>
-                                            <td class="py-1 px-2 text-right">{{ $d->credit > 0 ? 'Rp ' . number_format($d->credit, 0, ',', '.') : '-' }}</td>
+                                            <td class="py-1.5 px-2 text-right">{{ $d->debit > 0 ? 'Rp ' . number_format($d->debit, 0, ',', '.') : '-' }}</td>
+                                            <td class="py-1.5 px-2 text-right">{{ $d->credit > 0 ? 'Rp ' . number_format($d->credit, 0, ',', '.') : '-' }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>

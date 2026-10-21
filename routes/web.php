@@ -7,7 +7,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\PasswordResetController;
 
-// Admin Controllers (Termasuk DashboardController dari folder Admin)
+// Admin Controllers
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ChartOfAccountController;
@@ -82,13 +82,23 @@ Route::middleware('auth')->group(function () {
     // ==========================================
     Route::prefix('admin')->name('admin.')->group(function () {
 
-        // Khusus Admin (Manajemen User & COA)
+        // ------------------------------------------
+        // Khusus Role Admin (Manajemen User, COA, & Akses Hapus)
+        // ------------------------------------------
         Route::middleware('role:admin')->group(function () {
             Route::resource('users', UserController::class);
             Route::resource('chart-of-accounts', ChartOfAccountController::class);
+
+            // Hak Akses Penghapusan Permanen (Strictly Admin Only)
+            Route::delete('adjustments/{id}', [AdjustmentController::class, 'destroy'])->name('adjustments.destroy');
+            Route::delete('cash-transactions/{id}', [CashTransactionController::class, 'destroy'])->name('cash-transactions.destroy');
+            Route::delete('bank-reconciliations/{id}', [BankReconciliationController::class, 'destroy'])->name('bank-reconciliations.destroy');
+            Route::delete('payrolls/{id}', [PayrollController::class, 'destroy'])->name('payrolls.destroy');
         });
 
-        // Modul Jurnal Umum & Reversal
+        // ------------------------------------------
+        // Modul Jurnal Umum & Reversal (Admin & Akuntan)
+        // ------------------------------------------
         Route::middleware('permission:manage-journals')->group(function () {
             Route::get('/journals', [JournalController::class, 'index'])->name('journals.index');
             Route::post('/journals', [JournalController::class, 'store'])->name('journals.store');
@@ -98,17 +108,22 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:reverse-journals')
             ->name('journals.reverse');
 
+        // ------------------------------------------
         // Modul Transaksi Operasional
+        // ------------------------------------------
         Route::middleware('permission:manage-cash-transactions')->group(function () {
             Route::resource('cash-transactions', CashTransactionController::class)->only(['index', 'store']);
         });
 
         Route::middleware('permission:manage-bank-reconciliations')->group(function () {
-            Route::resource('bank-reconciliations', BankReconciliationController::class)->only(['index', 'store']);
+            Route::resource('bank-reconciliations', BankReconciliationController::class)->only(['index', 'store', 'update']);
         });
 
+        // Modul Jurnal Penyesuaian & Reversal
         Route::middleware('permission:manage-adjustments')->group(function () {
-            Route::resource('adjustments', AdjustmentController::class)->only(['index', 'store']);
+            Route::get('adjustments', [AdjustmentController::class, 'index'])->name('adjustments.index');
+            Route::post('adjustments', [AdjustmentController::class, 'store'])->name('adjustments.store');
+            Route::post('adjustments/{id}/reverse', [AdjustmentController::class, 'reverse'])->name('adjustments.reverse');
         });
 
         // Modul Pajak & Penggajian

@@ -99,10 +99,11 @@
                                     </td>
                                     <td class="py-3 px-4 font-medium text-xs uppercase">{{ $acc->normal_balance }}</td>
                                     <td class="py-3 px-4 text-center">
-                                        <form action="{{ route('admin.chart-of-accounts.destroy', $acc->id) }}" method="POST" onsubmit="return confirm('Hapus akun ini?');">
+                                        <!-- Form Hapus Akun (Gunakan $acc->id) -->
+                                        <form action="{{ route('admin.chart-of-accounts.destroy', $acc->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus akun ini?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="text-red-600 hover:underline text-xs font-semibold">Hapus</button>
+                                            <button type="submit" class="text-red-600 hover:text-red-900 font-medium">Hapus</button>
                                         </form>
                                     </td>
                                 </tr>

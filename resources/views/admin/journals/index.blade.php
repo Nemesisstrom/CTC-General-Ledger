@@ -67,7 +67,7 @@
                                 @endforeach
                             </select>
                             <div class="grid grid-cols-2 gap-2">
-                                <input type="number" name="items[0][debit]" placeholder="Debit Rp" class="px-2 py-1 border rounded text-xs font-semibold">
+                                <input type="number" name="items[0][debit]" placeholder="Debit Rp" required class="px-2 py-1 border rounded text-xs font-semibold">
                                 <input type="number" name="items[0][credit]" value="0" readonly class="px-2 py-1 border bg-gray-100 rounded text-xs">
                             </div>
                         </div>
@@ -82,7 +82,7 @@
                             </select>
                             <div class="grid grid-cols-2 gap-2">
                                 <input type="number" name="items[1][debit]" value="0" readonly class="px-2 py-1 border bg-gray-100 rounded text-xs">
-                                <input type="number" name="items[1][credit]" placeholder="Kredit Rp" class="px-2 py-1 border rounded text-xs font-semibold">
+                                <input type="number" name="items[1][credit]" placeholder="Kredit Rp" required class="px-2 py-1 border rounded text-xs font-semibold">
                             </div>
                         </div>
                     </div>
@@ -111,13 +111,16 @@
                                     <p class="text-xs text-gray-500 mt-0.5">{{ $j->journal_date }} | Ref: {{ $j->reference_number ?? '-' }}</p>
                                 </div>
 
-                                @if($j->status === 'posted')
-                                    <form action="{{ route('admin.journals.reverse', $j->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin melakukan Reversal / Pembatalan pada jurnal ini?');">
+                                <!-- PERBAIKAN: Menggunakan $j alih-alih $journal dan cegah reversal berantai -->
+                                @if($j->status !== 'reversed' && !str_starts_with($j->journal_number, 'REV-'))
+                                    <form action="{{ route('admin.journals.reverse', $j->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin membatalkan (reverse) jurnal ini?');">
                                         @csrf
-                                        <button type="submit" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs px-2.5 py-1 rounded-lg font-medium transition">
+                                        <button type="submit" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1">
                                             🔄 Reverse / Batal
                                         </button>
                                     </form>
+                                @elseif($j->status === 'reversed')
+                                    <span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-bold uppercase">REVERSED</span>
                                 @endif
                             </div>
 
@@ -136,7 +139,7 @@
                                     @foreach($j->details as $d)
                                         <tr>
                                             <td class="py-1.5 px-2 {{ $d->credit > 0 ? 'pl-6' : '' }}">
-                                                {{ $d->account->code }} - {{ $d->account->name }}
+                                                {{ $d->account->code ?? $d->chartOfAccount->code ?? '-' }} - {{ $d->account->name ?? $d->chartOfAccount->name ?? '-' }}
                                             </td>
                                             <td class="py-1.5 px-2 text-right">{{ $d->debit > 0 ? 'Rp ' . number_format($d->debit, 0, ',', '.') : '-' }}</td>
                                             <td class="py-1.5 px-2 text-right">{{ $d->credit > 0 ? 'Rp ' . number_format($d->credit, 0, ',', '.') : '-' }}</td>

@@ -4,22 +4,30 @@ namespace App\Exports;
 
 use App\Models\ChartOfAccount;
 use App\Models\JournalDetail;
+use Illuminate\Support\Enumerable;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class ProfitLossExport implements FromCollection, WithHeadings, WithMapping
+class ProfitLossExport implements FromCollection, WithHeadings, WithMapping, WithTitle, ShouldAutoSize, WithStyles
 {
     protected $startDate;
     protected $endDate;
 
-    public function __construct($startDate, $endDate)
+    public function __construct($startDate = null, $endDate = null)
     {
-        $this->startDate = $startDate;
-        $this->endDate   = $endDate;
+        $this->startDate = $startDate ?? date('Y-m-01');
+        $this->endDate   = $endDate ?? date('Y-m-t');
     }
 
-    public function collection()
+    /**
+     * Mengembalikan data akun pendapatan dan beban
+     */
+    public function collection(): Enumerable
     {
         $accounts = ChartOfAccount::whereIn('type', ['revenue', 'expense'])
             ->where('is_active', true)
@@ -37,7 +45,7 @@ class ProfitLossExport implements FromCollection, WithHeadings, WithMapping
 
             $balance = $account->type === 'revenue' ? ($credit - $debit) : ($debit - $credit);
 
-            return [
+            return (object) [
                 'code'    => $account->code,
                 'name'    => $account->name,
                 'type'    => strtoupper($account->type),
@@ -46,18 +54,42 @@ class ProfitLossExport implements FromCollection, WithHeadings, WithMapping
         });
     }
 
-    public function headings(): array
+    /**
+     * Judul Sheet Excel
+     */
+    public function title(): string
     {
-        return ['Kode Akun', 'Nama Akun', 'Kategori', 'Total Balance (Rp)'];
+        return 'Laba Rugi';
     }
 
+    /**
+     * Header Kolom Excel
+     */
+    public function headings(): array
+    {
+        return ['Kode Akun', 'Nama Akun', 'Kategori', 'Total Saldo (Rp)'];
+    }
+
+    /**
+     * Mapping data per baris
+     */
     public function map($row): array
     {
         return [
-            $row['code'],
-            $row['name'],
-            $row['type'],
-            $row['balance'],
+            $row->code,
+            $row->name,
+            $row->type,
+            $row->balance,
+        ];
+    }
+
+    /**
+     * Styling Tampilan (Bold Header)
+     */
+    public function styles(Worksheet $sheet): array
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
         ];
     }
 }

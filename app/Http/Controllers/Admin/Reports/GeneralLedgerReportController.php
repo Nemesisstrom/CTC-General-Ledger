@@ -14,11 +14,8 @@ class GeneralLedgerReportController extends Controller
 {
     public function index(Request $request)
     {
-        $accounts = ChartOfAccount::where('is_active', true)
-            ->orderBy('code', 'asc')
-            ->get();
-
-        $reportData = $this->generateReportData($request);
+        $accounts   = ChartOfAccount::where('is_active', true)->orderBy('code')->get();
+        $reportData = $this->generateReportData($request, $accounts);
 
         if ($request->wantsJson()) {
             return response()->json(['data' => $reportData]);
@@ -27,29 +24,20 @@ class GeneralLedgerReportController extends Controller
         return view('admin.reports.general_ledger', compact('accounts', 'reportData'));
     }
 
-    /**
-     * Membangun Struktur Data Laporan Buku Besar (General Ledger)
-     */
-    private function generateReportData(Request $request): array
+    private function generateReportData(Request $request, $accounts): array
     {
-        $accountId = $request->input('account_id');
+        $accountId = $request->input('account_id', $accounts->first()?->id);
         $startDate = $request->input('start_date', date('Y-m-01'));
         $endDate   = $request->input('end_date', date('Y-m-t'));
 
-        $selectedAccount = null;
+        $selectedAccount = $accountId ? ChartOfAccount::find($accountId) : null;
+        $journalEntries  = collect();
         $openingBalance  = 0;
-        $ledgerEntries   = collect();
-        $totalDebit      = 0;
-        $totalCredit     = 0;
+        $endingBalance   = 0;
 
-        if ($accountId) {
-            $selectedAccount = ChartOfAccount::findOrFail($accountId);
-
-            // 1. Hitung Saldo Awal (Opening Balance) sebelum $startDate
-            $totalsPrev = JournalDetail::where(function($q) use ($accountId) {
-                    $q->where('chart_of_account_id', $accountId)
-                      ->orWhere('account_id', $accountId);
-                })
+        if ($selectedAccount) {
+            // 1. Hitung Saldo Awal (Saldo sebelum tanggal mulai) - Menggunakan account_id
+            $prevTotals = JournalDetail::where('account_id', $selectedAccount->id)
                 ->whereHas('journal', function ($q) use ($startDate) {
                     $q->where('journal_date', '<', $startDate)
                       ->where('status', 'posted');
@@ -57,44 +45,36 @@ class GeneralLedgerReportController extends Controller
                 ->selectRaw('SUM(debit) as prev_debit, SUM(credit) as prev_credit')
                 ->first();
 
-            $prevDebit  = $totalsPrev->prev_debit ?? 0;
-            $prevCredit = $totalsPrev->prev_credit ?? 0;
+            $prevDebit  = $prevTotals->prev_debit ?? 0;
+            $prevCredit = $prevTotals->prev_credit ?? 0;
 
-            $normalBalance = strtolower($selectedAccount->normal_balance ?? ($selectedAccount->type === 'asset' || $selectedAccount->type === 'expense' ? 'debit' : 'credit'));
+            $openingBalance = $selectedAccount->normal_balance === 'debit'
+                ? ($prevDebit - $prevCredit)
+                : ($prevCredit - $prevDebit);
 
-            if ($normalBalance === 'debit') {
-                $openingBalance = $prevDebit - $prevCredit;
-            } else {
-                $openingBalance = $prevCredit - $prevDebit;
-            }
-
-            // 2. Ambil Transaksi Jurnal dalam Rentang Periode
-            $ledgerEntries = JournalDetail::with('journal')
-                ->where(function($q) use ($accountId) {
-                    $q->where('chart_of_account_id', $accountId)
-                      ->orWhere('account_id', $accountId);
-                })
+            // 2. Ambil Transaksi pada Periode Pilihan - Menggunakan account_id
+            $journalEntries = JournalDetail::with('journal')
+                ->where('account_id', $selectedAccount->id)
                 ->whereHas('journal', function ($q) use ($startDate, $endDate) {
                     $q->whereBetween('journal_date', [$startDate, $endDate])
                       ->where('status', 'posted');
                 })
                 ->get()
-                ->sortBy(fn ($entry) => $entry->journal->journal_date ?? $entry->created_at);
+                ->sortBy(fn ($entry) => $entry->journal->journal_date ?? $entry->created_at)
+                ->values();
 
-            // 3. Hitung Running Balance untuk Setiap Transaksi
-            $currentRunningBalance = $openingBalance;
-            $ledgerEntries->transform(function ($entry) use ($normalBalance, &$currentRunningBalance) {
-                if ($normalBalance === 'debit') {
-                    $currentRunningBalance += ($entry->debit - $entry->credit);
+            // 3. Hitung Running Balance
+            $currentBalance = $openingBalance;
+            foreach ($journalEntries as $entry) {
+                if ($selectedAccount->normal_balance === 'debit') {
+                    $currentBalance += ($entry->debit - $entry->credit);
                 } else {
-                    $currentRunningBalance += ($entry->credit - $entry->debit);
+                    $currentBalance += ($entry->credit - $entry->debit);
                 }
-                $entry->running_balance = $currentRunningBalance;
-                return $entry;
-            });
+                $entry->running_balance = $currentBalance;
+            }
 
-            $totalDebit  = $ledgerEntries->sum('debit');
-            $totalCredit = $ledgerEntries->sum('credit');
+            $endingBalance = $currentBalance;
         }
 
         return [
@@ -103,38 +83,36 @@ class GeneralLedgerReportController extends Controller
             'start_date'       => $startDate,
             'end_date'         => $endDate,
             'opening_balance'  => $openingBalance,
-            'ledger_entries'   => $ledgerEntries,
-            'total_debit'      => $totalDebit,
-            'total_credit'     => $totalCredit,
-            'ending_balance'   => $selectedAccount
-                ? (($selectedAccount->normal_balance ?? 'debit') === 'debit'
-                    ? ($openingBalance + $totalDebit - $totalCredit)
-                    : ($openingBalance + $totalCredit - $totalDebit))
-                : 0,
+            'ending_balance'   => $endingBalance,
+            'entries'          => $journalEntries,
         ];
     }
 
     public function exportPdf(Request $request)
     {
-        $reportData = $this->generateReportData($request);
+        $accounts   = ChartOfAccount::where('is_active', true)->orderBy('code')->get();
+        $reportData = $this->generateReportData($request, $accounts);
 
         if (!$reportData['selected_account']) {
-            return redirect()->back()->with('error', 'Silakan pilih akun terlebih dahulu untuk mengunduh laporan PDF.');
+            return redirect()->back()->with('error', 'Silakan pilih akun buku besar terlebih dahulu.');
         }
 
         $pdf = Pdf::loadView('admin.reports.pdf.general_ledger', compact('reportData'));
-        return $pdf->download('Laporan_Buku_Besar_' . $reportData['selected_account']->code . '_' . date('Ymd') . '.pdf');
+        return $pdf->download('Laporan_Buku_Besar_' . ($reportData['selected_account']->code ?? 'ALL') . '_' . date('Ymd_His') . '.pdf');
     }
 
     public function exportExcel(Request $request)
     {
-        $accountId = $request->input('account_id');
-        $startDate = $request->input('start_date', date('Y-m-01'));
-        $endDate   = $request->input('end_date', date('Y-m-t'));
+        $accounts   = ChartOfAccount::where('is_active', true)->orderBy('code')->get();
+        $reportData = $this->generateReportData($request, $accounts);
+
+        if (!$reportData['selected_account']) {
+            return redirect()->back()->with('error', 'Silakan pilih akun buku besar terlebih dahulu.');
+        }
 
         return Excel::download(
-            new GeneralLedgerExport($accountId, $startDate, $endDate),
-            'Laporan_Buku_Besar_' . date('Ymd') . '.xlsx'
+            new GeneralLedgerExport($reportData['account_id'], $reportData['start_date'], $reportData['end_date']),
+            'Laporan_Buku_Besar_' . ($reportData['selected_account']->code ?? 'ALL') . '_' . date('Ymd_His') . '.xlsx'
         );
     }
 }
