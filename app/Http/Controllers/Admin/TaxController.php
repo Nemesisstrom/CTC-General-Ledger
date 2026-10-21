@@ -163,7 +163,7 @@ class TaxController extends Controller
 
             // Disesuaikan dengan nama route di routes/web.php (taxes.index)
             return redirect()
-                ->route('taxes.index')
+                ->route('admin.taxes.index')
                 ->with('success', 'Transaksi pajak ' . $tax->name . ' sebesar Rp ' . number_format($taxAmount, 0, ',', '.') . ' berhasil dihitung & di-jurnal.');
 
         } catch (Exception $e) {
