@@ -6,6 +6,9 @@
     <title>Manajemen User - Sistem Keuangan</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex" x-data="{ openCreateModal: false, openEditModal: false, editData: {} }">
 
@@ -50,6 +53,16 @@
                 </div>
             @endif
 
+            @if ($errors->any())
+                <div class="mb-6 p-4 bg-red-100 border border-red-200 text-red-700 rounded-lg text-sm">
+                    <ul class="list-disc pl-5">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <!-- Header Action -->
             <div class="flex justify-between items-center mb-6">
                 <p class="text-sm text-gray-600">Kelola pengguna, hak akses peran (roles), dan informasi gaji dasar.</p>
@@ -79,17 +92,24 @@
                                 <td class="py-4 px-6">
                                     <span class="px-2.5 py-1 rounded-full text-xs font-bold uppercase
                                         {{ $user->hasRole('admin') ? 'bg-purple-100 text-purple-800' : ($user->hasRole('akuntan') ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800') }}">
-                                        {{ $user->getRoleNames()->first() ?? $user->role }}
+                                        {{ $user->getRoleNames()->first() ?? 'Staff' }}
                                     </span>
                                 </td>
-                                <td class="py-4 px-6 font-semibold">Rp {{ number_format($user->base_salary, 0, ',', '.') }}</td>
+                                <td class="py-4 px-6 font-semibold">Rp {{ number_format($user->base_salary ?? 0, 0, ',', '.') }}</td>
                                 <td class="py-4 px-6 text-center">
                                     <span class="px-2.5 py-1 rounded-full text-xs font-medium {{ $user->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
                                         {{ $user->is_active ? 'Aktif' : 'Non-Aktif' }}
                                     </span>
                                 </td>
                                 <td class="py-4 px-6 text-center space-x-2">
-                                    <button @click="openEditModal = true; editData = {{ json_encode($user) }}" class="text-blue-600 hover:text-blue-800 font-medium text-xs">
+                                    <button @click="openEditModal = true; editData = {
+                                        id: '{{ $user->id }}',
+                                        name: '{{ addslashes($user->name) }}',
+                                        email: '{{ $user->email }}',
+                                        role: '{{ $user->getRoleNames()->first() ?? '' }}',
+                                        base_salary: '{{ $user->base_salary ?? 0 }}',
+                                        is_active: '{{ $user->is_active ? 1 : 0 }}'
+                                    }" class="text-blue-600 hover:text-blue-800 font-medium text-xs">
                                         Edit
                                     </button>
                                     @if(auth()->id() !== $user->id)
@@ -135,6 +155,7 @@
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1">Role / Peran</label>
                     <select name="role" required class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                        <option value="">Pilih Role</option>
                         @foreach($roles as $role)
                             <option value="{{ $role->name }}">{{ strtoupper($role->name) }}</option>
                         @endforeach
@@ -156,7 +177,7 @@
     <div x-show="openEditModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" x-cloak>
         <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6" @click.away="openEditModal = false">
             <h3 class="text-lg font-bold text-gray-800 mb-4">Edit User</h3>
-            <form :action="'/users/' + editData.id" method="POST" class="space-y-4">
+            <form :action="'/admin/users/' + editData.id" method="POST" class="space-y-4">
                 @csrf
                 @method('PUT')
                 <div>
@@ -174,6 +195,7 @@
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1">Role / Peran</label>
                     <select name="role" x-model="editData.role" required class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                        <option value="">Pilih Role</option>
                         @foreach($roles as $role)
                             <option value="{{ $role->name }}">{{ strtoupper($role->name) }}</option>
                         @endforeach
