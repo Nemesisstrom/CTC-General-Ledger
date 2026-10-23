@@ -67,76 +67,84 @@
                 @hasanyrole('admin|akuntan')
                     <div class="pt-4 pb-1 px-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Akuntansi & Transaksi</div>
 
-                    @can('manage-journals')
+                    @hasanyrole('admin|akuntan')
                     <a href="{{ route('admin.journals.index') }}" class="flex items-center px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition">
                         <svg class="w-5 h-5 mr-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         Jurnal Umum
                     </a>
-                    @endcan
+                    @endhasanyrole
 
-                    @can('manage-bank-reconciliations')
+                    <!-- MENU BARU: JURNAL PEMBALIKAN -->
+                    @hasanyrole('admin|akuntan')
+                    <a href="{{ route('admin.journals.reversals.index') }}" class="flex items-center px-4 py-2.5 text-sm font-medium text-amber-300 hover:bg-slate-800 hover:text-amber-200 rounded-lg transition">
+                        <svg class="w-5 h-5 mr-3 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        Jurnal Pembalikan
+                    </a>
+                    @endhasanyrole
+
+                    @hasanyrole('admin|akuntan')
                     <a href="{{ route('admin.bank-reconciliations.index') }}" class="flex items-center px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition">
                         <svg class="w-5 h-5 mr-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>
                         Rekonsiliasi Bank
                     </a>
-                    @endcan
+                    @endhasanyrole
 
-                    @can('manage-adjustments')
+                    @hasanyrole('admin|akuntan')
                     <a href="{{ route('admin.adjustments.index') }}" class="flex items-center px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition">
                         <svg class="w-5 h-5 mr-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
                         Jurnal Penyesuaian
                     </a>
-                    @endcan
+                    @endhasanyrole
 
-                    @can('process-taxes')
+                    @hasanyrole('admin|akuntan')
                     <a href="{{ route('admin.taxes.index') }}" class="flex items-center px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition">
                         <svg class="w-5 h-5 mr-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         Perpajakan
                     </a>
-                    @endcan
+                    @endhasanyrole
                 @endhasanyrole
 
                 <!-- OPERASIONAL -->
                 <div class="pt-4 pb-1 px-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Operasional</div>
 
-                @can('manage-cash-transactions')
+                @hasanyrole('admin|akuntan')
                 <a href="{{ route('admin.cash-transactions.index') }}" class="flex items-center px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition">
                     <svg class="w-5 h-5 mr-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                     Transaksi Kas
                 </a>
-                @endcan
+                @endhasanyrole
 
-                @can('manage-payrolls')
+                @hasanyrole('admin|akuntan')
                 <a href="{{ route('admin.payrolls.index') }}" class="flex items-center px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition">
                     <svg class="w-5 h-5 mr-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     Penggajian (Payroll)
                 </a>
-                @endcan
+                @endhasanyrole
 
                 <!-- LAPORAN KEUANGAN -->
                 @hasanyrole('admin|akuntan')
                     <div class="pt-4 pb-1 px-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Laporan Keuangan</div>
 
-                    @can('view-reports-general-ledger')
+                    @hasanyrole('admin|akuntan')
                     <a href="{{ route('admin.reports.general-ledger') }}" class="flex items-center px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition">
                         <svg class="w-5 h-5 mr-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         Buku Besar
                     </a>
-                    @endcan
+                    @endhasanyrole
 
-                    @can('view-reports-profit-loss')
+                    @hasanyrole('admin|akuntan')
                     <a href="{{ route('admin.reports.profit-loss') }}" class="flex items-center px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition">
                         <svg class="w-5 h-5 mr-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                         Laba Rugi
                     </a>
-                    @endcan
+                    @endhasanyrole
 
-                    @can('view-reports-balance-sheet')
+                    @hasanyrole('admin|akuntan')
                     <a href="{{ route('admin.reports.balance-sheet') }}" class="flex items-center px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition">
                         <svg class="w-5 h-5 mr-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5 5 0 006 0l-3-9eM6 7l6 2m6-2l-6 2m6-2l3 1m-3-1l-3 9a5 5 0 006 0l-3-9"/></svg>
                         Neraca
                     </a>
-                    @endcan
+                    @endhasanyrole
                 @endhasanyrole
             </nav>
         </div>
@@ -177,11 +185,11 @@
         </header>
 
         <!-- Main Content Body -->
-        <main class="p-4 sm:p-8 flex-1">
-            <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-6">Ringkasan Ringkas Keuangan</h2>
+        <main class="p-4 sm:p-8 flex-1 space-y-8">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Ringkasan Ringkas Keuangan</h2>
 
             <!-- Metric Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 <div class="bg-white p-5 sm:p-6 rounded-xl shadow-sm border border-gray-100">
                     <p class="text-xs font-medium text-gray-500 uppercase">Kas Masuk</p>
                     <p class="text-xl sm:text-2xl font-bold text-green-600 mt-2">Rp {{ number_format($data['kas_masuk'] ?? 0, 0, ',', '.') }}</p>
@@ -202,41 +210,73 @@
                 </div>
             </div>
 
-            <!-- Table Transaksi Kas -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-                <h3 class="text-base sm:text-lg font-bold text-gray-800 mb-4">Transaksi Kas Terbaru</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">
-                                <th class="py-3 px-4">No. Transaksi</th>
-                                <th class="py-3 px-4">Tanggal</th>
-                                <th class="py-3 px-4">Tipe</th>
-                                <th class="py-3 px-4">Jumlah</th>
-                                <th class="py-3 px-4">Keterangan</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100 text-sm whitespace-nowrap">
-                            @forelse($data['transaksi_terakhir'] ?? [] as $trx)
-                                <tr class="hover:bg-gray-50">
-                                    <td class="py-3 px-4 font-mono text-xs">{{ $trx->transaction_number }}</td>
-                                    <td class="py-3 px-4">{{ $trx->transaction_date }}</td>
-                                    <td class="py-3 px-4">
-                                        <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $trx->type === 'in' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                            {{ $trx->type === 'in' ? 'Masuk' : 'Keluar' }}
-                                        </span>
-                                    </td>
-                                    <td class="py-3 px-4 font-semibold">Rp {{ number_format($trx->amount, 0, ',', '.') }}</td>
-                                    <td class="py-3 px-4 text-gray-600">{{ $trx->description ?? '-' }}</td>
+            <!-- Grid 2 Kolom: Transaksi Kas & Jurnal Pembalikan -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                <!-- Table Transaksi Kas -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 space-y-4">
+                    <h3 class="text-base sm:text-lg font-bold text-gray-800">Transaksi Kas Terbaru</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">
+                                    <th class="py-3 px-4">No. Transaksi</th>
+                                    <th class="py-3 px-4">Tanggal</th>
+                                    <th class="py-3 px-4">Tipe</th>
+                                    <th class="py-3 px-4">Jumlah</th>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="py-4 text-center text-gray-500">Belum ada transaksi kas recorded.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 text-sm whitespace-nowrap">
+                                @forelse($data['transaksi_terakhir'] ?? [] as $trx)
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="py-3 px-4 font-mono text-xs">{{ $trx->transaction_number }}</td>
+                                        <td class="py-3 px-4 text-xs">{{ $trx->transaction_date }}</td>
+                                        <td class="py-3 px-4">
+                                            <span class="px-2 py-1 rounded-full text-[10px] font-semibold {{ $trx->type === 'in' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                                {{ $trx->type === 'in' ? 'Masuk' : 'Keluar' }}
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-4 font-semibold text-xs">Rp {{ number_format($trx->amount, 0, ',', '.') }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="py-4 text-center text-gray-500 text-xs">Belum ada transaksi kas recorded.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
+                <!-- WIDGET BARU: Jurnal Pembalikan Terbaru -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 space-y-4">
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <h3 class="text-base sm:text-lg font-bold text-gray-800">Jurnal Pembalikan Terbaru</h3>
+                        @hasanyrole('admin|akuntan')('reverse-journals')
+                            <a href="{{ route('admin.journals.reversals.index') }}" class="text-xs font-semibold text-amber-600 hover:underline">
+                                Modul Pembalikan →
+                            </a>
+                        @endhasanyrole
+                    </div>
+
+                    <div class="space-y-3">
+                        @forelse($data['pembalikan_terakhir'] ?? [] as $rev)
+                            <div class="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-1">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-mono font-bold text-xs text-blue-600">{{ $rev->journal_number }}</span>
+                                    <span class="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold uppercase">
+                                        {{ $rev->status }}
+                                    </span>
+                                </div>
+                                <p class="text-xs text-gray-700 font-medium">{{ $rev->description }}</p>
+                                <p class="text-[10px] text-gray-400">{{ $rev->journal_date }} | Ref: {{ $rev->reference_number ?? '-' }}</p>
+                            </div>
+                        @empty
+                            <p class="text-center py-6 text-gray-400 italic text-xs">Belum ada aktivitas pembalikan jurnal.</p>
+                        @endforelse
+                    </div>
+                </div>
+
             </div>
         </main>
     </div>

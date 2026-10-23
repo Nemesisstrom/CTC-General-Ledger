@@ -31,6 +31,32 @@ class JournalController extends Controller
         return view('admin.journals.index', compact('journals', 'accounts'));
     }
 
+    /**
+     * Halaman Khusus Pengelolaan & Eksekusi Jurnal Pembalikan (Reversal)
+     */
+    public function reversalIndex(Request $request)
+    {
+        // Jurnal Aktif yang dapat di-reverse
+        $postedJournals = Journal::with(['details.account', 'creator'])
+            ->where('status', 'posted')
+            ->where('journal_number', 'NOT LIKE', 'REV-%')
+            ->orderBy('journal_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->paginate(10, ['*'], 'posted_page');
+
+        // Riwayat Jurnal Pembalik atau Jurnal yang sudah Dibatalkan
+        $reversedJournals = Journal::with(['details.account', 'creator'])
+            ->where(function ($query) {
+                $query->where('status', 'reversed')
+                      ->orWhere('journal_number', 'LIKE', 'REV-%');
+            })
+            ->orderBy('journal_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->paginate(10, ['*'], 'reversed_page');
+
+        return view('admin.journals.reversals', compact('postedJournals', 'reversedJournals'));
+    }
+
     public function store(StoreJournalRequest $request)
     {
         $validated = $request->validated();
@@ -43,7 +69,7 @@ class JournalController extends Controller
             $journal = Journal::create([
                 'journal_number'   => $journalNumber,
                 'journal_date'     => $validated['transaction_date'] ?? $validated['journal_date'],
-                'reference_number' => $validated['reference_number'],
+                'reference_number' => $validated['reference_number'] ?? null,
                 'description'      => $validated['description'] ?? null,
                 'status'           => 'posted',
                 'created_by'       => auth()->id(),
@@ -51,7 +77,7 @@ class JournalController extends Controller
 
             foreach ($validated['items'] as $item) {
                 $journal->details()->create([
-                    'account_id' => $item['account_id'] ?? $item['chart_of_account_id'], // DIPERBAIKI: account_id
+                    'account_id' => $item['account_id'] ?? $item['chart_of_account_id'],
                     'debit'      => $item['debit'],
                     'credit'     => $item['credit'],
                     'memo'       => $item['memo'] ?? null,
@@ -111,7 +137,7 @@ class JournalController extends Controller
             foreach ($originalJournal->details as $detail) {
                 JournalDetail::create([
                     'journal_id' => $reversalJournal->id,
-                    'account_id' => $detail->account_id ?? $detail->chart_of_account_id, // DIPERBAIKI: account_id
+                    'account_id' => $detail->account_id ?? $detail->chart_of_account_id,
                     'debit'      => $detail->credit,
                     'credit'     => $detail->debit,
                     'memo'       => 'Pembalikan otomatis dari ' . $originalJournal->journal_number,
@@ -129,8 +155,9 @@ class JournalController extends Controller
                 ]);
             }
 
+            // Redirect kembali ke Halaman Jurnal Pembalikan
             return redirect()
-                ->route('admin.journals.index')
+                ->route('admin.journals.reversals.index')
                 ->with('success', 'Jurnal ' . $originalJournal->journal_number . ' berhasil dibatalkan dengan Reversal Entry: ' . $reversalNumber);
 
         } catch (Exception $e) {

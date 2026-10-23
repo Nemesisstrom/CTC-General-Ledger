@@ -99,14 +99,17 @@ Route::middleware('auth')->group(function () {
         // ------------------------------------------
         // Modul Jurnal Umum & Reversal (Admin & Akuntan)
         // ------------------------------------------
+        // Modul Jurnal Umum (Hanya Tampil & Posting)
         Route::middleware('permission:manage-journals')->group(function () {
             Route::get('/journals', [JournalController::class, 'index'])->name('journals.index');
             Route::post('/journals', [JournalController::class, 'store'])->name('journals.store');
         });
 
-        Route::post('/journals/{id}/reverse', [JournalController::class, 'reverse'])
-            ->middleware('permission:reverse-journals')
-            ->name('journals.reverse');
+        // Modul Khusus Jurnal Pembalikan (Reversal Ledger)
+        Route::middleware('permission:reverse-journals')->group(function () {
+            Route::get('/journals/reversals', [JournalController::class, 'reversalIndex'])->name('journals.reversals.index');
+            Route::post('/journals/{id}/reverse', [JournalController::class, 'reverse'])->name('journals.reverse');
+        });
 
         // ------------------------------------------
         // Modul Transaksi Operasional
