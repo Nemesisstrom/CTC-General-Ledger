@@ -15,14 +15,12 @@ class JournalController extends Controller
 {
     public function index(Request $request)
     {
+        // Menggunakan Eager Loading untuk mencegah N+1 Problem[cite: 2]
         $journals = Journal::with(['details.account', 'creator'])
-            ->orderBy('journal_date', 'desc')
-            ->orderBy('id', 'desc')
+            ->latest('journal_date')
             ->paginate(15);
 
-        $accounts = ChartOfAccount::where('is_active', true)
-            ->orderBy('code', 'asc')
-            ->get();
+        $accounts = ChartOfAccount::where('is_active', true)->orderBy('code')->get();
 
         if ($request->wantsJson()) {
             return response()->json(['data' => $journals]);
@@ -31,82 +29,48 @@ class JournalController extends Controller
         return view('admin.journals.index', compact('journals', 'accounts'));
     }
 
-    /**
-     * Halaman Khusus Pengelolaan & Eksekusi Jurnal Pembalikan (Reversal)
-     */
-    public function reversalIndex(Request $request)
-    {
-        // Jurnal Aktif yang dapat di-reverse
-        $postedJournals = Journal::with(['details.account', 'creator'])
-            ->where('status', 'posted')
-            ->where('journal_number', 'NOT LIKE', 'REV-%')
-            ->orderBy('journal_date', 'desc')
-            ->orderBy('id', 'desc')
-            ->paginate(10, ['*'], 'posted_page');
-
-        // Riwayat Jurnal Pembalik atau Jurnal yang sudah Dibatalkan
-        $reversedJournals = Journal::with(['details.account', 'creator'])
-            ->where(function ($query) {
-                $query->where('status', 'reversed')
-                      ->orWhere('journal_number', 'LIKE', 'REV-%');
-            })
-            ->orderBy('journal_date', 'desc')
-            ->orderBy('id', 'desc')
-            ->paginate(10, ['*'], 'reversed_page');
-
-        return view('admin.journals.reversals', compact('postedJournals', 'reversedJournals'));
-    }
-
     public function store(StoreJournalRequest $request)
     {
-        $validated = $request->validated();
-
         DB::beginTransaction();
         try {
             $nextId = (Journal::max('id') ?? 0) + 1;
             $journalNumber = 'JRN-' . date('Ym') . '-' . sprintf('%04d', $nextId);
 
+            // 1. Simpan Header Jurnal
             $journal = Journal::create([
                 'journal_number'   => $journalNumber,
-                'journal_date'     => $validated['transaction_date'] ?? $validated['journal_date'],
-                'reference_number' => $validated['reference_number'] ?? null,
-                'description'      => $validated['description'] ?? null,
+                'journal_date'     => $request->journal_date ?? $request->transaction_date,
+                'reference_number' => $request->reference_number,
+                'description'      => $request->description,
                 'status'           => 'posted',
                 'created_by'       => auth()->id(),
             ]);
 
-            foreach ($validated['items'] as $item) {
-                $journal->details()->create([
-                    'account_id' => $item['account_id'] ?? $item['chart_of_account_id'],
-                    'debit'      => $item['debit'],
-                    'credit'     => $item['credit'],
-                    'memo'       => $item['memo'] ?? null,
+            // 2. Simpan Detail Jurnal (Debet & Kredit)
+            $items = $request->items ?? $request->details ?? [];
+            foreach ($items as $item) {
+                JournalDetail::create([
+                    'journal_id'          => $journal->id,
+                    'chart_of_account_id' => $item['account_id'] ?? $item['chart_of_account_id'],
+                    'debit'               => $item['debit'] ?? 0,
+                    'credit'              => $item['credit'] ?? 0,
+                    'memo'                => $item['memo'] ?? $request->description,
                 ]);
             }
 
             DB::commit();
 
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'message' => 'Transaksi jurnal berhasil disimpan.',
-                    'data'    => $journal->load('details')
-                ], 201);
-            }
-
             return redirect()
                 ->route('admin.journals.index')
-                ->with('success', 'Transaksi jurnal ' . $journalNumber . ' berhasil disimpan.');
+                ->with('success', 'Jurnal ' . $journalNumber . ' berhasil disimpan dan diposting.');
 
         } catch (Exception $e) {
             DB::rollBack();
 
-            if ($request->wantsJson()) {
-                return response()->json(['error' => 'Gagal menyimpan jurnal: ' . $e->getMessage()], 500);
-            }
-
-            return back()
-                ->withInput()
-                ->with('error', 'Gagal menyimpan jurnal: ' . $e->getMessage());
+            return redirect()
+                ->back()
+                ->with('error', 'Gagal memproses jurnal: ' . $e->getMessage())
+                ->withInput();
         }
     }
 
@@ -136,11 +100,11 @@ class JournalController extends Controller
 
             foreach ($originalJournal->details as $detail) {
                 JournalDetail::create([
-                    'journal_id' => $reversalJournal->id,
-                    'account_id' => $detail->account_id ?? $detail->chart_of_account_id,
-                    'debit'      => $detail->credit,
-                    'credit'     => $detail->debit,
-                    'memo'       => 'Pembalikan otomatis dari ' . $originalJournal->journal_number,
+                    'journal_id'          => $reversalJournal->id,
+                    'chart_of_account_id' => $detail->chart_of_account_id ?? $detail->account_id,
+                    'debit'               => $detail->credit,
+                    'credit'              => $detail->debit,
+                    'memo'                => 'Pembalikan otomatis dari ' . $originalJournal->journal_number,
                 ]);
             }
 
@@ -155,9 +119,8 @@ class JournalController extends Controller
                 ]);
             }
 
-            // Redirect kembali ke Halaman Jurnal Pembalikan
             return redirect()
-                ->route('admin.journals.reversals.index')
+                ->route('admin.journals.index')
                 ->with('success', 'Jurnal ' . $originalJournal->journal_number . ' berhasil dibatalkan dengan Reversal Entry: ' . $reversalNumber);
 
         } catch (Exception $e) {
