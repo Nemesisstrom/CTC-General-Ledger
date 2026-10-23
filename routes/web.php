@@ -134,6 +134,13 @@ Route::middleware('auth')->group(function () {
             Route::post('/taxes/process', [TaxController::class, 'processTaxTransaction'])->name('taxes.process');
         });
 
+        // CRUD Master Data Skema Pajak (Khusus Role Admin)
+        Route::middleware('role:admin')->group(function () {
+            Route::post('/taxes/master', [TaxController::class, 'store'])->name('taxes.store');
+            Route::put('/taxes/master/{tax}', [TaxController::class, 'update'])->name('taxes.update');
+            Route::delete('/taxes/master/{tax}', [TaxController::class, 'destroy'])->name('taxes.destroy');
+        });
+
         Route::middleware('permission:manage-payrolls')->group(function () {
             Route::resource('payrolls', PayrollController::class)->only(['index', 'store']);
         });

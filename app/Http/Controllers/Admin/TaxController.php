@@ -17,14 +17,78 @@ class TaxController extends Controller
     public function index(Request $request)
     {
         $taxes = Tax::with('account')->orderBy('type')->get();
-        $accounts = ChartOfAccount::where('is_active', true)->get();
-        $cashAccounts = ChartOfAccount::where('type', 'asset')->where('is_active', true)->get();
+        $accounts = ChartOfAccount::where('is_active', true)->orderBy('code', 'asc')->get();
+        $cashAccounts = ChartOfAccount::where('type', 'asset')->where('is_active', true)->orderBy('code', 'asc')->get();
 
         if ($request->wantsJson()) {
             return response()->json(['data' => $taxes]);
         }
 
         return view('admin.tax.index', compact('taxes', 'accounts', 'cashAccounts'));
+    }
+
+    /**
+     * Tambah Master Skema Pajak Baru (Admin Only)
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'code'        => 'required|string|max:20|unique:taxes,code',
+            'name'        => 'required|string|max:255',
+            'rate'        => 'required|numeric|min:0|max:100',
+            'type'        => 'required|in:PPN,PPh21,PPh23,PPh_Final',
+            'account_id'  => 'required|exists:chart_of_accounts,id',
+            'description' => 'nullable|string',
+        ]);
+
+        Tax::create([
+            'code'        => strtoupper($request->code),
+            'name'        => $request->name,
+            'rate'        => $request->rate,
+            'type'        => $request->type,
+            'account_id'  => $request->account_id,
+            'description' => $request->description,
+            'is_active'   => true,
+        ]);
+
+        return redirect()->route('admin.taxes.index')->with('success', 'Skema pajak baru berhasil ditambahkan.');
+    }
+
+    /**
+     * Update Master Skema Pajak (Admin Only)
+     */
+    public function update(Request $request, Tax $tax)
+    {
+        $request->validate([
+            'code'        => 'required|string|max:20|unique:taxes,code,' . $tax->id,
+            'name'        => 'required|string|max:255',
+            'rate'        => 'required|numeric|min:0|max:100',
+            'type'        => 'required|in:PPN,PPh21,PPh23,PPh_Final',
+            'account_id'  => 'required|exists:chart_of_accounts,id',
+            'is_active'   => 'required|boolean',
+            'description' => 'nullable|string',
+        ]);
+
+        $tax->update([
+            'code'        => strtoupper($request->code),
+            'name'        => $request->name,
+            'rate'        => $request->rate,
+            'type'        => $request->type,
+            'account_id'  => $request->account_id,
+            'is_active'   => $request->is_active,
+            'description' => $request->description,
+        ]);
+
+        return redirect()->route('admin.taxes.index')->with('success', 'Skema pajak berhasil diperbarui.');
+    }
+
+    /**
+     * Hapus Master Skema Pajak (Admin Only)
+     */
+    public function destroy(Tax $tax)
+    {
+        $tax->delete();
+        return redirect()->route('admin.taxes.index')->with('success', 'Skema pajak berhasil dihapus.');
     }
 
     /**
@@ -38,7 +102,6 @@ class TaxController extends Controller
 
         DB::beginTransaction();
         try {
-            // Generasi nomor jurnal penyesuaian/pajak unik
             $nextId = (Journal::max('id') ?? 0) + 1;
             $journalNumber = 'TAX-' . date('Ym') . '-' . sprintf('%04d', $nextId);
 
@@ -52,10 +115,8 @@ class TaxController extends Controller
             ]);
 
             if ($request->transaction_type === 'sales') {
-                // Penjualan dengan PPN Keluaran
                 $totalCash = $subtotal + $taxAmount;
 
-                // 1. Debit: Kas/Bank (Total setelah pajak)
                 JournalDetail::create([
                     'journal_id' => $journal->id,
                     'account_id' => $request->cash_account_id,
@@ -64,7 +125,6 @@ class TaxController extends Controller
                     'memo'       => 'Penerimaan Kas (Termasuk ' . $tax->name . ')',
                 ]);
 
-                // 2. Kredit: Pendapatan (Subtotal DPP)
                 JournalDetail::create([
                     'journal_id' => $journal->id,
                     'account_id' => $request->revenue_expense_id,
@@ -73,7 +133,6 @@ class TaxController extends Controller
                     'memo'       => 'Pendapatan Bersih DPP',
                 ]);
 
-                // 3. Kredit: Utang Pajak / PPN Keluaran
                 JournalDetail::create([
                     'journal_id' => $journal->id,
                     'account_id' => $tax->account_id,
@@ -83,14 +142,11 @@ class TaxController extends Controller
                     'memo'       => 'Kewajiban ' . $tax->name,
                 ]);
             } else {
-                // Transaksi Pembelian/Beban
                 $isWithholding = str_contains(strtoupper($tax->type ?? ''), 'PPH');
 
                 if ($isWithholding) {
-                    // Pemotongan PPh (misal PPh 23): Kas keluar berkurang karena dipotong pajak
                     $totalCash = $subtotal - $taxAmount;
 
-                    // 1. Debit: Beban Operasional (DPP Utuh)
                     JournalDetail::create([
                         'journal_id' => $journal->id,
                         'account_id' => $request->revenue_expense_id,
@@ -99,7 +155,6 @@ class TaxController extends Controller
                         'memo'       => 'Beban Operasional DPP',
                     ]);
 
-                    // 2. Kredit: Utang PPh (Pemotongan Pajak Karyawan/Vendor)
                     JournalDetail::create([
                         'journal_id' => $journal->id,
                         'account_id' => $tax->account_id,
@@ -109,7 +164,6 @@ class TaxController extends Controller
                         'memo'       => 'Potongan ' . $tax->name,
                     ]);
 
-                    // 3. Kredit: Kas/Bank (Net Payment)
                     JournalDetail::create([
                         'journal_id' => $journal->id,
                         'account_id' => $request->cash_account_id,
@@ -118,10 +172,8 @@ class TaxController extends Controller
                         'memo'       => 'Pembayaran Kas setelah Potongan Pajak',
                     ]);
                 } else {
-                    // PPN Masukan: Kas keluar sebesar Total + Pajak
                     $totalCash = $subtotal + $taxAmount;
 
-                    // 1. Debit: Beban / Aset (DPP)
                     JournalDetail::create([
                         'journal_id' => $journal->id,
                         'account_id' => $request->revenue_expense_id,
@@ -130,7 +182,6 @@ class TaxController extends Controller
                         'memo'       => 'Beban Operasional / Pembelian DPP',
                     ]);
 
-                    // 2. Debit: PPN Masukan (Pajak Dibayar di Muka)
                     JournalDetail::create([
                         'journal_id' => $journal->id,
                         'account_id' => $tax->account_id,
@@ -140,7 +191,6 @@ class TaxController extends Controller
                         'memo'       => 'PPN Masukan / ' . $tax->name,
                     ]);
 
-                    // 3. Kredit: Kas/Bank
                     JournalDetail::create([
                         'journal_id' => $journal->id,
                         'account_id' => $request->cash_account_id,
@@ -153,25 +203,12 @@ class TaxController extends Controller
 
             DB::commit();
 
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'message'    => 'Transaksi pajak berhasil dihitung & diposting ke jurnal',
-                    'tax_amount' => $taxAmount,
-                    'journal'    => $journal->load('details'),
-                ], 201);
-            }
-
-            // Disesuaikan dengan nama route di routes/web.php (taxes.index)
             return redirect()
                 ->route('admin.taxes.index')
                 ->with('success', 'Transaksi pajak ' . $tax->name . ' sebesar Rp ' . number_format($taxAmount, 0, ',', '.') . ' berhasil dihitung & di-jurnal.');
 
         } catch (Exception $e) {
             DB::rollBack();
-
-            if ($request->wantsJson()) {
-                return response()->json(['error' => 'Gagal memproses pajak: ' . $e->getMessage()], 500);
-            }
 
             return redirect()
                 ->back()
