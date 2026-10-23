@@ -90,7 +90,6 @@ Route::middleware('auth')->group(function () {
             Route::resource('chart-of-accounts', ChartOfAccountController::class);
 
             // Hak Akses Penghapusan Permanen (Strictly Admin Only)
-            Route::delete('adjustments/{id}', [AdjustmentController::class, 'destroy'])->name('adjustments.destroy');
             Route::delete('cash-transactions/{id}', [CashTransactionController::class, 'destroy'])->name('cash-transactions.destroy');
             Route::delete('bank-reconciliations/{id}', [BankReconciliationController::class, 'destroy'])->name('bank-reconciliations.destroy');
             Route::delete('payrolls/{id}', [PayrollController::class, 'destroy'])->name('payrolls.destroy');

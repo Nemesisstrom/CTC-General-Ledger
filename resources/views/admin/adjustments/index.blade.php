@@ -105,15 +105,7 @@
                                         </form>
                                     @endif
 
-                                    <!-- Tombol Hapus (HANYA TAMPIL UNTUK ROLE ADMIN) -->
                                     @role('admin')
-                                        <form action="{{ route('admin.adjustments.destroy', $adj->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus jurnal ini secara permanen?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-xs text-red-600 hover:text-red-800 font-semibold transition">
-                                                Hapus
-                                            </button>
-                                        </form>
                                     @endrole
                                 </div>
                             </div>

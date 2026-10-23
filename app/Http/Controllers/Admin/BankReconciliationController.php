@@ -15,6 +15,7 @@ class BankReconciliationController extends Controller
 {
     public function index(Request $request)
     {
+        // Mengambil seluruh catatan rekonsiliasi bank beserta relasi akun & reconciler
         $reconciliations = BankReconciliation::with(['account', 'reconciler'])
             ->orderBy('statement_date', 'desc')
             ->orderBy('id', 'desc')
@@ -23,6 +24,7 @@ class BankReconciliationController extends Controller
         // Hanya mengambil akun bertipe Asset (Kas/Bank) yang aktif
         $bankAccounts = ChartOfAccount::where('type', 'asset')
             ->where('is_active', true)
+            ->orderBy('code', 'asc')
             ->get();
 
         if ($request->wantsJson()) {

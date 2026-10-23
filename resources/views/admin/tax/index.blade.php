@@ -53,9 +53,9 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Jenis Pajak</label>
                         <select name="tax_id" required class="w-full px-3 py-2 border rounded-lg outline-none">
                             <option value="">-- Pilih Skema Pajak --</option>
-                            @foreach($taxes as $t)
-                                <option value="{{ $t->id }}">
-                                    {{ $t->code }} - {{ $t->name }} ({{ $t->rate }}%)
+                            @foreach($taxes as $tax)
+                                <option value="{{ $tax->id }}">
+                                    {{ $tax->code }} - {{ $tax->name }} ({{ $tax->rate }}%)
                                 </option>
                             @endforeach
                         </select>
@@ -106,7 +106,7 @@
                                 <th class="py-3 px-3">Nama Pajak</th>
                                 <th class="py-3 px-3">Tipe</th>
                                 <th class="py-3 px-3 text-right">Tarif (%)</th>
-                                <th class="py-3 px-3">Akun COA Penampung</th>
+                                <th class="py-3 px-3">Rekening Penampung</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
@@ -120,7 +120,7 @@
                                         </span>
                                     </td>
                                     <td class="py-3 px-3 text-right font-bold text-blue-600">{{ $tax->rate }}%</td>
-                                    <td class="py-3 px-3 text-gray-600">{{ $tax->account->code }} - {{ $tax->account->name }}</td>
+                                    <td class="py-3 px-3 text-gray-600">{{ $tax->account->code ?? '-' }} - {{ $tax->account->name ?? '-' }}</td>
                                 </tr>
                             @empty
                                 <tr>
