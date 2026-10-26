@@ -1,20 +1,20 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Rekapitulasi Pajak</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+@extends('layouts.app')
+
+@section('title', 'Laporan Rekapitulasi Pajak')
+
+@section('styles')
     <style>
         @media print {
             .no-print { display: none !important; }
             body { background: white !important; padding: 0 !important; }
+            .report-page { max-width: none !important; margin: 0 !important; padding: 0 !important; }
             .shadow-sm { box-shadow: none !important; }
         }
     </style>
-</head>
-<body class="bg-gray-100 min-h-screen p-6">
-    <div class="max-w-6xl mx-auto space-y-6">
+@endsection
+
+@section('content')
+    <div class="report-page mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
 
         <!-- Toolbar Filter & Ekspor (No Print) -->
         <div class="no-print bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -51,17 +51,20 @@
             <div class="flex items-center gap-2 self-end flex-wrap">
                 <!-- Export PDF -->
                 <a href="{{ route('admin.reports.tax.pdf', request()->query()) }}" class="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1">
-                    📄 Export PDF
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 3h7l5 5v13H5V3h2zm7 0v5h5M8 13h8m-8 4h8"/></svg>
+                    Export PDF
                 </a>
 
                 <!-- Export Excel -->
                 <a href="{{ route('admin.reports.tax.excel', request()->query()) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1">
-                    📊 Export Excel
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h16v16H4zM8 4v16m8-16v16M4 10h16m-16 5h16"/></svg>
+                    Export Excel
                 </a>
 
                 <!-- Print Browser -->
                 <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white text-sm px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1">
-                    🖨️ Cetak
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z"/></svg>
+                    Cetak
                 </button>
 
                 <!-- Kembali ke Dashboard -->
@@ -150,5 +153,4 @@
 
         </div>
     </div>
-</body>
-</html>
+@endsection

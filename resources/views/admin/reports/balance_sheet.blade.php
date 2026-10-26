@@ -1,19 +1,20 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Laporan Neraca Keuangan</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+@extends('layouts.app')
+
+@section('title', 'Laporan Neraca Keuangan')
+
+@section('styles')
     <style>
         @media print {
             .no-print { display: none !important; }
             body { background: white !important; padding: 0 !important; }
+            .report-page { max-width: none !important; margin: 0 !important; padding: 0 !important; }
             .shadow-sm { box-shadow: none !important; }
         }
     </style>
-</head>
-<body class="bg-gray-100 min-h-screen p-6">
-    <div class="max-w-6xl mx-auto space-y-6">
+@endsection
+
+@section('content')
+    <div class="report-page mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
 
         <!-- Toolbar Filter & Action (No Print) -->
         <div class="no-print bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -25,7 +26,8 @@
 
             <div class="flex items-center gap-2">
                 <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white text-sm px-4 py-1.5 rounded-lg transition">
-                    🖨️ Cetak / Save PDF
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z"/></svg>
+                    Cetak / Save PDF
                 </button>
                 <a href="{{ route('dashboard') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm px-4 py-1.5 rounded-lg transition">
                     Kembali
@@ -45,7 +47,8 @@
             <!-- Warning Status Balance -->
             @if(!$reportData['is_balanced'])
                 <div class="no-print bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm text-center">
-                    ⚠️ <strong>Perhatian:</strong> Neraca tidak seimbang! Total Aset tidak sama dengan Total Kewajiban + Ekuitas.
+                    <svg class="mr-1 inline h-4 w-4 align-text-bottom" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18.14A2 2 0 003.53 21h16.94a2 2 0 001.71-2.86L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                    <strong>Perhatian:</strong> Neraca tidak seimbang! Total Aset tidak sama dengan Total Kewajiban + Ekuitas.
                 </div>
             @endif
 
@@ -56,6 +59,7 @@
                 <div class="space-y-4">
                     <h2 class="text-lg font-bold text-gray-800 border-b-2 border-gray-800 pb-1">ASET (AKTIVA)</h2>
 
+                    <div class="max-w-full overflow-x-auto">
                     <table class="w-full text-sm">
                         <tbody>
                             @forelse($reportData['assets'] as $asset)
@@ -70,6 +74,7 @@
                             @endforelse
                         </tbody>
                     </table>
+                    </div>
 
                     <div class="flex justify-between items-center font-bold text-gray-900 pt-4 border-t-2 border-gray-900 bg-gray-50 p-2 rounded">
                         <span>TOTAL ASET</span>
@@ -83,6 +88,7 @@
                     <!-- KEWAJIBAN -->
                     <div class="space-y-4">
                         <h2 class="text-lg font-bold text-gray-800 border-b-2 border-gray-800 pb-1">KEWAJIBAN (LIABILITAS)</h2>
+                        <div class="max-w-full overflow-x-auto">
                         <table class="w-full text-sm">
                             <tbody>
                                 @forelse($reportData['liabilities'] as $liab)
@@ -97,6 +103,7 @@
                                 @endforelse
                             </tbody>
                         </table>
+                        </div>
                         <div class="flex justify-between items-center font-semibold text-gray-800 pt-2 border-t text-sm">
                             <span>Total Kewajiban</span>
                             <span>Rp {{ number_format($reportData['total_liabilities'], 0, ',', '.') }}</span>
@@ -106,6 +113,7 @@
                     <!-- EKUITAS -->
                     <div class="space-y-4">
                         <h2 class="text-lg font-bold text-gray-800 border-b-2 border-gray-800 pb-1">EKUITAS (MODAL)</h2>
+                        <div class="max-w-full overflow-x-auto">
                         <table class="w-full text-sm">
                             <tbody>
                                 @foreach($reportData['equities'] as $equity)
@@ -120,6 +128,7 @@
                                 </tr>
                             </tbody>
                         </table>
+                        </div>
                         <div class="flex justify-between items-center font-semibold text-gray-800 pt-2 border-t text-sm">
                             <span>Total Ekuitas</span>
                             <span>Rp {{ number_format($reportData['total_equity'], 0, ',', '.') }}</span>
@@ -152,5 +161,4 @@
 
         </div>
     </div>
-</body>
-</html>
+@endsection

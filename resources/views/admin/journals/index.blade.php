@@ -1,13 +1,9 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Jurnal Umum</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-</head>
-<body class="bg-gray-100 min-h-screen p-6">
-    <div class="max-w-7xl mx-auto space-y-6">
+@extends('layouts.app')
+
+@section('title', 'Jurnal Umum')
+
+@section('content')
+    <div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
 
         <!-- Header -->
         <div class="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm">
@@ -18,7 +14,7 @@
             <div class="flex items-center gap-2">
                 @hasanyrole('admin|akuntan')
                     <a href="{{ route('admin.journals.reversals.index') }}" class="text-sm bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition">
-                        🔄 Ke Jurnal Pembalikan
+                        Ke Jurnal Pembalikan
                     </a>
                 @endhasanyrole
                 <a href="{{ route('dashboard') }}" class="text-sm bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg font-medium">Kembali ke Dashboard</a>
@@ -157,7 +153,8 @@
                             <p class="text-xs text-gray-700 font-medium">{{ $j->description }}</p>
 
                             <!-- Items Table Detail -->
-                            <table class="w-full text-xs text-left bg-white rounded border">
+                            <div class="max-w-full overflow-x-auto">
+                            <table class="w-full min-w-[520px] text-xs text-left bg-white rounded border">
                                 <thead>
                                     <tr class="border-b bg-gray-100 text-gray-500 uppercase">
                                         <th class="py-1.5 px-2">NO. REKENING & NAMA REKENING</th>
@@ -178,6 +175,7 @@
                                     @endforeach
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                     @empty
                         <div class="text-center py-8 text-gray-400 italic">Belum ada jurnal yang tercatat.</div>
@@ -191,5 +189,4 @@
 
         </div>
     </div>
-</body>
-</html>
+@endsection

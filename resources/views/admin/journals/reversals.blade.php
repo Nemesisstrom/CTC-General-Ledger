@@ -1,12 +1,9 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Jurnal Pembalikan (Reversal Ledger)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 min-h-screen p-6">
-    <div class="max-w-7xl mx-auto space-y-6">
+@extends('layouts.app')
+
+@section('title', 'Jurnal Pembalikan (Reversal Ledger)')
+
+@section('content')
+    <div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
 
         <!-- Header -->
         <div class="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm">
@@ -44,7 +41,7 @@
                                 <form action="{{ route('admin.journals.reverse', $j->id) }}" method="POST" onsubmit="return confirm('Proses pembalikan jurnal {{ $j->journal_number }}?');">
                                     @csrf
                                     <button type="submit" class="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg font-semibold transition shadow-sm">
-                                        🔄 Eksekusi Reversal
+                                        Eksekusi Reversal
                                     </button>
                                 </form>
                             </div>
@@ -83,5 +80,4 @@
 
         </div>
     </div>
-</body>
-</html>
+@endsection

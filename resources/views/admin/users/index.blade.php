@@ -1,45 +1,12 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manajemen User - Sistem Keuangan</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <style>
-        [x-cloak] { display: none !important; }
-    </style>
-</head>
-<body class="bg-gray-100 min-h-screen flex" x-data="{ openCreateModal: false, openEditModal: false, editData: {} }">
+@extends('layouts.app')
 
-    <!-- Sidebar Integration -->
-    <aside class="w-64 bg-slate-900 text-white min-h-screen flex flex-col justify-between shadow-lg">
-        <div>
-            <div class="px-6 py-5 border-b border-slate-800 flex items-center space-x-3">
-                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-lg">S</div>
-                <span class="font-bold text-lg tracking-wide text-slate-100">SIK & Payroll</span>
-            </div>
-            <nav class="px-4 py-6 space-y-1">
-                <a href="{{ route('dashboard') }}" class="flex items-center px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition">
-                    Dashboard
-                </a>
-                <a href="{{ route('admin.users.index') }}" class="flex items-center px-4 py-3 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm">
-                    Manajemen User
-                </a>
-            </nav>
-        </div>
-    </aside>
+@section('title', 'Manajemen User - Sistem Keuangan')
 
-    <!-- Main Content -->
-    <div class="flex-1 flex flex-col">
-        <header class="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center shadow-sm">
-            <h1 class="text-xl font-bold text-gray-800">Manajemen Pengguna (User Management)</h1>
-            <span class="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-800 uppercase">
-                {{ auth()->user()->getRoleNames()->first() ?? 'ADMIN' }}
-            </span>
-        </header>
+@section('content')
+    <div x-data="{ openCreateModal: false, openEditModal: false, editData: {} }" class="min-w-0 p-4 sm:p-6 lg:p-8">
+        <main class="mx-auto max-w-7xl space-y-6">
+            <h1 class="text-2xl font-bold tracking-tight text-gray-800">Manajemen Pengguna (User Management)</h1>
 
-        <main class="p-8">
             <!-- Alert Notifications -->
             @if(session('success'))
                 <div class="mb-6 p-4 bg-green-100 border border-green-200 text-green-700 rounded-lg text-sm">
@@ -64,16 +31,17 @@
             @endif
 
             <!-- Header Action -->
-            <div class="flex justify-between items-center mb-6">
+            <div class="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                 <p class="text-sm text-gray-600">Kelola pengguna, hak akses peran (roles), dan informasi gaji dasar.</p>
-                <button @click="openCreateModal = true" class="bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm px-4 py-2.5 rounded-lg transition shadow-sm">
+                <button @click="openCreateModal = true" class="shrink-0 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700">
                     + Tambah User Baru
                 </button>
             </div>
 
             <!-- Tabel Data User -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <table class="w-full text-left border-collapse">
+                <div class="overflow-x-auto">
+                <table class="w-full min-w-[860px] border-collapse text-left">
                     <thead>
                         <tr class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase">
                             <th class="py-3 px-6">Nama</th>
@@ -130,12 +98,12 @@
                         @endforelse
                     </tbody>
                 </table>
+                </div>
             </div>
         </main>
-    </div>
 
-    <!-- Modal Tambah User -->
-    <div x-show="openCreateModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" x-cloak>
+        <!-- Modal Tambah User -->
+        <div x-show="openCreateModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" x-cloak>
         <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6" @click.away="openCreateModal = false">
             <h3 class="text-lg font-bold text-gray-800 mb-4">Tambah User Baru</h3>
             <form action="{{ route('admin.users.store') }}" method="POST" class="space-y-4">
@@ -173,8 +141,8 @@
         </div>
     </div>
 
-    <!-- Modal Edit User -->
-    <div x-show="openEditModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" x-cloak>
+        <!-- Modal Edit User -->
+        <div x-show="openEditModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" x-cloak>
         <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6" @click.away="openEditModal = false">
             <h3 class="text-lg font-bold text-gray-800 mb-4">Edit User</h3>
             <form :action="'/admin/users/' + editData.id" method="POST" class="space-y-4">
@@ -218,7 +186,6 @@
                 </div>
             </form>
         </div>
+        </div>
     </div>
-
-</body>
-</html>
+@endsection

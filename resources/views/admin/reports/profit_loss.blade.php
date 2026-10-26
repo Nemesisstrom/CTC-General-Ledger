@@ -1,19 +1,20 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Laporan Laba Rugi</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+@extends('layouts.app')
+
+@section('title', 'Laporan Laba Rugi')
+
+@section('styles')
     <style>
         @media print {
             .no-print { display: none !important; }
             body { background: white !important; padding: 0 !important; }
+            .report-page { max-width: none !important; margin: 0 !important; padding: 0 !important; }
             .shadow-sm { box-shadow: none !important; }
         }
     </style>
-</head>
-<body class="bg-gray-100 min-h-screen p-6">
-    <div class="max-w-4xl mx-auto space-y-6">
+@endsection
+
+@section('content')
+    <div class="report-page mx-auto max-w-4xl space-y-6 p-4 sm:p-6 lg:p-8">
 
         <!-- Toolbar Filter & Action (No Print) -->
         <div class="no-print bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -27,7 +28,8 @@
 
             <div class="flex items-center gap-2">
                 <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white text-sm px-4 py-1.5 rounded-lg transition">
-                    🖨️ Cetak PDF
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z"/></svg>
+                    Cetak PDF
                 </button>
                 <a href="{{ route('dashboard') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm px-4 py-1.5 rounded-lg transition">
                     Kembali
@@ -50,6 +52,7 @@
             <!-- BAGIAN PENDAPATAN -->
             <div class="space-y-3">
                 <h2 class="text-md font-bold text-gray-800 uppercase border-b pb-1">1. Pendapatan (Revenue)</h2>
+                <div class="max-w-full overflow-x-auto">
                 <table class="w-full text-sm">
                     <tbody>
                         @forelse($reportData['revenues'] as $rev)
@@ -64,6 +67,7 @@
                         @endforelse
                     </tbody>
                 </table>
+                </div>
                 <div class="flex justify-between items-center font-bold text-gray-900 pt-2 border-t text-sm bg-gray-50 p-2 rounded">
                     <span>TOTAL PENDAPATAN</span>
                     <span>Rp {{ number_format($reportData['total_revenue'], 0, ',', '.') }}</span>
@@ -73,6 +77,7 @@
             <!-- BAGIAN BEBAN & BIAYA -->
             <div class="space-y-3">
                 <h2 class="text-md font-bold text-gray-800 uppercase border-b pb-1">2. Beban & Biaya (Expenses)</h2>
+                <div class="max-w-full overflow-x-auto">
                 <table class="w-full text-sm">
                     <tbody>
                         @forelse($reportData['expenses'] as $exp)
@@ -87,6 +92,7 @@
                         @endforelse
                     </tbody>
                 </table>
+                </div>
                 <div class="flex justify-between items-center font-bold text-gray-900 pt-2 border-t text-sm bg-gray-50 p-2 rounded">
                     <span>TOTAL BEBAN</span>
                     <span>Rp {{ number_format($reportData['total_expense'], 0, ',', '.') }}</span>
@@ -115,5 +121,4 @@
 
         </div>
     </div>
-</body>
-</html>
+@endsection

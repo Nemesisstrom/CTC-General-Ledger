@@ -177,6 +177,19 @@ Route::middleware('auth')->group(function () {
                 Route::get('/payroll/pdf', [PayrollReportController::class, 'exportPdf'])->name('payroll.pdf');
                 Route::get('/payroll/excel', [PayrollReportController::class, 'exportExcel'])->name('payroll.excel');
             });
+            
+            // 6. CRUD Master Data Skema Pajak (Khusus Role Admin)
+            Route::middleware('role:admin')->group(function () {
+                Route::post('/taxes/master', [TaxController::class, 'store'])
+                    ->name('taxes.store');
+
+                Route::put('/taxes/master/{tax}', [TaxController::class, 'update'])
+                    ->name('taxes.update');
+
+                Route::delete('/taxes/master/{tax}', [TaxController::class, 'destroy'])
+                    ->name('taxes.destroy');
+            });
+
 
         }); // End Reports Prefix
 

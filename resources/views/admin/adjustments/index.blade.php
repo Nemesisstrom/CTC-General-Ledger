@@ -1,12 +1,9 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Jurnal Penyesuaian & Penyusutan</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 min-h-screen p-6">
-    <div class="max-w-7xl mx-auto space-y-6">
+@extends('layouts.app')
+
+@section('title', 'Jurnal Penyesuaian & Penyusutan')
+
+@section('content')
+    <div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
 
         <!-- Header -->
         <div class="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm">
@@ -100,7 +97,7 @@
                                         <form action="{{ route('admin.adjustments.reverse', $adj->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin membatalkan (reverse) jurnal penyesuaian ini?');">
                                             @csrf
                                             <button type="submit" class="text-xs bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 px-2 py-1 rounded transition font-medium">
-                                                🔄 Reverse
+                                                Reverse
                                             </button>
                                         </form>
                                     @endif
@@ -112,7 +109,8 @@
 
                             <p class="text-xs text-gray-700 font-medium">{{ $adj->description }}</p>
 
-                            <table class="w-full text-xs text-left bg-white rounded border">
+                            <div class="max-w-full overflow-x-auto">
+                            <table class="w-full min-w-[420px] text-xs text-left bg-white rounded border">
                                 <thead>
                                     <tr class="border-b bg-gray-100 text-gray-500 uppercase">
                                         <th class="py-1.5 px-2">Akun</th>
@@ -132,6 +130,7 @@
                                     @endforeach
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                     @empty
                         <div class="text-center py-8 text-gray-400 italic">Belum ada jurnal penyesuaian.</div>
@@ -145,5 +144,4 @@
 
         </div>
     </div>
-</body>
-</html>
+@endsection

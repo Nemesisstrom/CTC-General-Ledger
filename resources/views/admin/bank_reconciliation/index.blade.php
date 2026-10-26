@@ -1,12 +1,9 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Rekonsiliasi Rekening Bank</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 min-h-screen p-6">
-    <div class="max-w-7xl mx-auto space-y-6">
+@extends('layouts.app')
+
+@section('title', 'Rekonsiliasi Rekening Bank')
+
+@section('content')
+    <div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
 
         <!-- Header -->
         <div class="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm">
@@ -130,5 +127,4 @@
 
         </div>
     </div>
-</body>
-</html>
+@endsection
