@@ -148,7 +148,7 @@
                 <label for="password_confirmation" class="block text-xs font-bold text-[#526057] mb-1">Konfirmasi Kata Sandi</label>
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400">
-                        <i class="fa-solid fa-shield-check text-xs"></i>
+                        <i class="fa-solid fa-lock text-xs"></i>
                     </span>
                     <input :type="showConfirm ? 'text' : 'password'" id="password_confirmation" name="password_confirmation" required placeholder="Ulangi kata sandi"
                         class="w-full pl-10 pr-10 py-2 bg-[#F9FBF9] border border-[#E1E8E2] rounded-xl text-xs text-[#202B25] outline-none transition focus:border-[#176B45] focus:bg-white focus:ring-2 focus:ring-[#176B45]/10">

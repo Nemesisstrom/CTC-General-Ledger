@@ -33,6 +33,17 @@ class AuthController extends Controller
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $user = Auth::user();
 
+            // Cek apakah status akun aktif (blokir jika non-aktif)
+            if (! $user->is_active) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                throw ValidationException::withMessages([
+                    'email' => ['Akun Anda telah dinonaktifkan oleh Administrator.'],
+                ]);
+            }
+            
             // Cek apakah user memiliki role Spatie yang dipilih
             if (!empty($selectedRole) && !$user->hasRole($selectedRole)) {
                 Auth::logout();
