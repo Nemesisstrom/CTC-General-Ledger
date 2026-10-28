@@ -21,10 +21,13 @@ class PayrollController extends Controller
     {
         $period = $request->input('period', date('Y-m'));
 
-        $payrolls = Payroll::with(['user', 'items', 'journal'])
+        $payrollQuery = Payroll::with(['user', 'items', 'journal'])
             ->where('period', $period)
-            ->orderBy('id', 'desc')
-            ->get();
+            ->orderBy('id', 'desc');
+
+        $payrolls = $request->wantsJson()
+            ? $payrollQuery->get()
+            : $payrollQuery->paginate(15)->withQueryString();
 
         $employees = User::where('is_active', true)->get();
 

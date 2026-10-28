@@ -17,6 +17,7 @@ class Tax extends Model
         'rate',
         'account_id',
         'is_active',
+        'description',
     ];
 
     protected $casts = [

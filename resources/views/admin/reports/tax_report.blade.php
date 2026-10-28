@@ -14,7 +14,7 @@
 @endsection
 
 @section('content')
-    <div class="report-page mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div class="feature-page report-page mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
 
         <!-- Toolbar Filter & Ekspor (No Print) -->
         <div class="no-print bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
