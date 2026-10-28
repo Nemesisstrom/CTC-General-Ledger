@@ -3,18 +3,28 @@
 @section('title', 'Jurnal Pembalikan (Reversal Ledger)')
 
 @section('content')
-    <div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div class="feature-page mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
 
-        <!-- Header -->
-        <div class="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800">Modul Jurnal Pembalikan</h1>
-                <p class="text-sm text-gray-500">Eksekusi pembatalan transaksi & penyesuaian balance saldo</p>
+        <!-- Header Hero Banner - Modul Jurnal Pembalikan -->
+        <section class="dashboard-enter relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-[#104B35] via-[#176B45] to-[#248052] px-4 py-6 text-white shadow-lg shadow-[#104B35]/10 sm:px-8 sm:py-8 mb-6">
+            <div class="pointer-events-none absolute -right-12 -top-24 -z-10 h-72 w-72 rounded-full border border-white/10"></div>
+            <div class="pointer-events-none absolute -right-2 -top-14 -z-10 h-52 w-52 rounded-full border border-white/10"></div>
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#C6E4D0]">CTC General Ledger</p>
+                    <div class="mt-2 text-xl font-bold tracking-tight text-white sm:text-2xl" role="heading" aria-level="1">
+                        Modul Jurnal Pembalikan
+                    </div>
+                    <p class="mt-1 text-xs text-[#E8F4EC] sm:text-sm">
+                        Eksekusi pembatalan transaksi & penyesuaian balance saldo.
+                    </p>
+                </div>
+                <a href="{{ route('admin.journals.index') }}" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#104B35] shadow-sm transition hover:bg-[#E8F4EC] focus:outline-none focus:ring-2 focus:ring-white/50">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                    Kembali ke Jurnal Umum
+                </a>
             </div>
-            <a href="{{ route('admin.journals.index') }}" class="text-sm bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg font-medium">
-                Kembali ke Jurnal Umum
-            </a>
-        </div>
+        </section>
 
         @if(session('success'))
             <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">

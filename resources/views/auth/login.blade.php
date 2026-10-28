@@ -3,25 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Sistem Keuangan & Payroll</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Login - CTC General Ledger</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <style>
+        [x-cloak] { display: none !important; }
+        
+        /* Smooth GPU-Accelerated Animations */
+        @keyframes floatLogo {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-7px) rotate(1.5deg); }
+        }
+        .animate-float {
+            animation: floatLogo 4s ease-in-out infinite;
+            will-change: transform;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.35; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.1); }
+        }
+        .animate-glow-slow {
+            animation: pulseGlow 8s ease-in-out infinite;
+        }
+
+        @keyframes pulseGlowReverse {
+            0%, 100% { opacity: 0.5; transform: scale(1.05); }
+            50% { opacity: 0.25; transform: scale(0.95); }
+        }
+        .animate-glow-reverse {
+            animation: pulseGlowReverse 10s ease-in-out infinite;
+        }
+
+        /* SVG Accounting Grid Pattern Backdrop */
+        .bg-grid-pattern {
+            background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-    <div class="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
-        <div class="text-center mb-8">
-            <h2 class="text-2xl font-bold text-gray-800">Sistem Keuanga CTC</h2>
-            <p class="text-sm text-gray-500 mt-1">Silakan masuk ke akun Anda</p>
+<body class="min-h-screen bg-[#072419] flex items-center justify-center p-4 relative overflow-hidden antialiased select-none">
+
+    {{-- KREATIF BACKGROUND LAYERS --}}
+    <!-- 1. Geometric Grid Overlay -->
+    <div class="absolute inset-0 bg-grid-pattern opacity-60 pointer-events-none"></div>
+
+    <!-- 2. Radial Ambient Glow Blob Top-Left -->
+    <div class="animate-glow-slow absolute -top-28 -left-28 w-96 h-96 bg-[#176B45] rounded-full blur-[120px] pointer-events-none"></div>
+
+    <!-- 3. Vibrant Emerald Glow Blob Bottom-Right -->
+    <div class="animate-glow-reverse absolute -bottom-32 -right-32 w-[30rem] h-[30rem] bg-[#104B35] rounded-full blur-[140px] pointer-events-none"></div>
+
+    <!-- 4. Subtle Gold/Highlight Accent Orb Center Behind Card -->
+    <div class="animate-glow-slow absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-emerald-500/20 rounded-full blur-[100px] pointer-events-none"></div>
+
+    {{-- MAIN FORM CARD --}}
+    <div class="relative z-10 w-full max-w-md bg-white/95 backdrop-blur-xl rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] border border-white/30 p-8 sm:p-9">
+        
+        {{-- Header Logo Interaktif --}}
+        <div class="text-center mb-7">
+            <div class="inline-block relative mb-3 group">
+                <div class="absolute -inset-1.5 bg-gradient-to-r from-emerald-500 to-teal-400 rounded-2xl blur-md group-hover:blur-lg opacity-60 group-hover:opacity-90 transition duration-300"></div>
+                <img 
+                    src="{{ asset('images/Logo_CTC.png') }}" 
+                    alt="Logo CTC" 
+                    class="animate-float relative w-16 h-16 object-contain mx-auto drop-shadow-md"
+                >
+            </div>
+            <h1 class="text-xl font-black tracking-tight text-[#202B25]">CTC General Ledger</h1>
+            <p class="text-xs font-bold text-[#176B45] uppercase tracking-wider mt-0.5">Sistem Keuangan & Payroll</p>
         </div>
 
+        {{-- Flash Messages --}}
         @if (session('success'))
-            <div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
-                {{ session('success') }}
+            <div class="mb-5 bg-[#E8F4EC] border border-[#D5E8DA] text-[#176B45] px-4 py-3 rounded-xl text-xs font-medium flex items-center gap-2">
+                <i class="fa-solid fa-circle-check text-sm shrink-0"></i>
+                <span>{{ session('success') }}</span>
             </div>
         @endif
 
         @if ($errors->any())
-            <div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                <ul class="list-disc list-inside">
+            <div class="mb-5 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-xs font-medium space-y-1">
+                <div class="flex items-center gap-1.5 font-bold mb-1">
+                    <i class="fa-solid fa-circle-exclamation shrink-0"></i>
+                    <span>Terjadi Kesalahan Login</span>
+                </div>
+                <ul class="list-disc list-inside space-y-0.5 text-[11px] opacity-90 pl-1">
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
                     @endforeach
@@ -29,42 +100,89 @@
             </div>
         @endif
 
-        <form action="{{ route('login.post') }}" method="POST" class="space-y-5">
+        {{-- Form Login --}}
+        <form action="{{ route('login.post') }}" method="POST" class="space-y-4" x-data="{ showPassword: false }">
             @csrf
+
+            {{-- Input Email --}}
             <div>
-                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Alamat Email</label>
-                <input type="email" id="email" name="email" value="{{ old('email') }}" required autofocus
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition duration-200">
+                <label for="email" class="block text-xs font-bold text-[#526057] mb-1.5">Alamat Email Perusahaan</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400">
+                        <i class="fa-solid fa-envelope text-xs"></i>
+                    </span>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        value="{{ old('email') }}" 
+                        required 
+                        autofocus
+                        placeholder="karyawan@ctc.co.id"
+                        class="w-full pl-10 pr-4 py-2.5 bg-[#F9FBF9] border border-[#E1E8E2] rounded-xl text-xs text-[#202B25] outline-none transition focus:border-[#176B45] focus:bg-white focus:ring-2 focus:ring-[#176B45]/10"
+                    >
+                </div>
             </div>
 
+            {{-- Input Password + Toggle Show/Hide --}}
             <div>
-                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <input type="password" id="password" name="password" required
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition duration-200">
+                <label for="password" class="block text-xs font-bold text-[#526057] mb-1.5">Kata Sandi</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400">
+                        <i class="fa-solid fa-lock text-xs"></i>
+                    </span>
+                    <input 
+                        :type="showPassword ? 'text' : 'password'" 
+                        id="password" 
+                        name="password" 
+                        required
+                        placeholder="••••••••"
+                        class="w-full pl-10 pr-10 py-2.5 bg-[#F9FBF9] border border-[#E1E8E2] rounded-xl text-xs text-[#202B25] outline-none transition focus:border-[#176B45] focus:bg-white focus:ring-2 focus:ring-[#176B45]/10"
+                    >
+                    <button 
+                        type="button" 
+                        @click="showPassword = !showPassword"
+                        class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 hover:text-[#176B45] transition focus:outline-none"
+                    >
+                        <i class="fa-solid" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                    </button>
+                </div>
             </div>
 
-            <div class="flex items-center justify-between my-2">
-                <label class="flex items-center">
-                    <input type="checkbox" name="remember" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                    <span class="ml-2 text-sm text-gray-600">Ingat saya</span>
+            {{-- Remember & Forgot Password --}}
+            <div class="flex items-center justify-between pt-1">
+                <label class="flex items-center cursor-pointer">
+                    <input type="checkbox" name="remember" class="w-3.5 h-3.5 rounded border-[#E1E8E2] text-[#176B45] focus:ring-[#176B45]/30">
+                    <span class="ml-2 text-xs font-medium text-[#68756D]">Ingat sesi saya</span>
                 </label>
-                <a href="{{ route('password.request') }}" class="text-sm text-blue-600 hover:underline">
-                    Lupa password?
-                </a>
+                
+                @if (Route::has('password.request'))
+                    <a href="{{ route('password.request') }}" class="text-xs font-bold text-[#176B45] hover:text-[#104B35] transition">
+                        Lupa kata sandi?
+                    </a>
+                @endif
             </div>
 
-            <button type="submit"
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition duration-200 shadow-md">
-                Masuk
+            {{-- Submit Button --}}
+            <button 
+                type="submit"
+                class="w-full bg-[#176B45] hover:bg-[#104B35] active:scale-[0.98] text-white font-bold py-2.5 rounded-xl transition duration-150 shadow-lg shadow-[#176B45]/25 flex items-center justify-center gap-2 text-xs mt-2"
+            >
+                <span>Masuk ke Dashboard</span>
+                <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
             </button>
+        </form>
 
-            <p class="text-center text-sm text-gray-600 mt-4">
-                Belum memiliki akun?
-                <a href="{{ route('register') }}" class="text-blue-600 hover:underline font-semibold">
-                    Daftar disini
+        {{-- Register Link --}}
+        @if (Route::has('register'))
+            <p class="text-center text-xs text-[#68756D] mt-6 pt-4 border-t border-[#E1E8E2]">
+                Belum memiliki akses akun? 
+                <a href="{{ route('register') }}" class="text-[#176B45] font-bold hover:underline">
+                    Daftar di sini
                 </a>
             </p>
-        </form>
+        @endif
     </div>
+
 </body>
 </html>

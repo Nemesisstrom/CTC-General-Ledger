@@ -8,15 +8,20 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('taxes', function (Blueprint $table) {
-            $table->text('description')->nullable()->after('type');
-        });
+        // Pengecekan agar tidak error jika kolom 'description' sudah dibuat di migrasi utama
+        if (!Schema::hasColumn('taxes', 'description')) {
+            Schema::table('taxes', function (Blueprint $table) {
+                $table->text('description')->nullable()->after('type');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('taxes', function (Blueprint $table) {
-            $table->dropColumn('description');
-        });
+        if (Schema::hasColumn('taxes', 'description')) {
+            Schema::table('taxes', function (Blueprint $table) {
+                $table->dropColumn('description');
+            });
+        }
     }
 };
