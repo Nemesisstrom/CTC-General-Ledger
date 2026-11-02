@@ -2,19 +2,8 @@
 
 @section('title', 'Laporan Rekapitulasi Penggajian')
 
-@section('styles')
-    <style>
-        @media print {
-            .no-print { display: none !important; }
-            body { background: white !important; padding: 0 !important; }
-            .report-page { max-width: none !important; margin: 0 !important; padding: 0 !important; }
-            .shadow-sm { box-shadow: none !important; }
-        }
-    </style>
-@endsection
-
 @section('content')
-    <div class="feature-page report-page mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div class="feature-page report-page report-page--payroll mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
 
         <!-- Toolbar Filter (No Print) -->
         <div class="no-print bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
