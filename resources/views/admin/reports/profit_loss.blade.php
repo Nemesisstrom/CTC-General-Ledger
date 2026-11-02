@@ -2,94 +2,8 @@
 
 @section('title', 'Laporan Laba Rugi')
 
-@section('styles')
-    <style>
-        /* Hilangkan overflow scrollbar di layar web agar seperti dokumen murni */
-        .report-page,
-        .document-sheet,
-        .report-table-wrapper {
-            overflow: visible !important;
-            max-width: 100% !important;
-        }
-
-        /* CSS KHUSUS DOKUMEN CETAK (PRINT VIEW) */
-        @media print {
-            @page {
-                size: A4 portrait;
-                margin: 8mm;
-            }
-
-            .app-sidebar,
-            .app-topbar,
-            .app-sidebar-backdrop,
-            footer,
-            .no-print {
-                display: none !important;
-            }
-
-            html, body {
-                background: #ffffff !important;
-                color: #000000 !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                width: 100% !important;
-                overflow: visible !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-
-            .app-shell, main, #app-main, .report-page {
-                margin: 0 !important;
-                padding: 0 !important;
-                max-width: 100% !important;
-                width: 100% !important;
-                box-shadow: none !important;
-                border: none !important;
-                overflow: visible !important;
-            }
-
-            .document-sheet {
-                padding: 0 !important;
-                margin: 0 !important;
-                border: none !important;
-                box-shadow: none !important;
-            }
-
-            .report-section-block {
-                page-break-inside: avoid !important;
-                margin-bottom: 20px !important;
-            }
-
-            table {
-                width: 100% !important;
-                border-collapse: collapse !important;
-                font-size: 8.5pt !important;
-                table-layout: fixed !important;
-            }
-
-            th, td {
-                border: 1px solid #94a3b8 !important;
-                padding: 5px 6px !important;
-                vertical-align: middle !important;
-                word-wrap: break-word !important;
-            }
-
-            th {
-                background-color: #f1f5f9 !important;
-                color: #0f172a !important;
-                font-weight: 700 !important;
-            }
-
-            .print-signature {
-                display: flex !important;
-                page-break-inside: avoid !important;
-            }
-        }
-    </style>
-@endsection
-
 @section('content')
-    <div class="feature-page report-page mx-auto max-w-4xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div class="feature-page report-page report-page--profit-loss mx-auto max-w-4xl space-y-6 p-4 sm:p-6 lg:p-8">
 
         <!-- Toolbar Filter (No Print) -->
         <div class="no-print bg-white p-4 rounded-xl shadow-sm flex flex-col lg:flex-row lg:items-end justify-between gap-4 border border-gray-100">
@@ -237,7 +151,7 @@
                 <div class="report-section-block">
                     <table class="w-full text-left border-collapse text-xs table-fixed">
                         <tbody>
-                            <tr class="border-2 font-bold text-xs {{ $reportData['net_profit'] >= 0 ? 'bg-emerald-50/80 border-emerald-600 text-emerald-900' : 'bg-red-50/80 border-red-600 text-red-900' }}">
+                            <tr class="border-2 font-bold text-xs {{ $reportData['net_profit'] >= 0 ? 'net-profit' : 'net-loss' }}">
                                 <td class="py-3 px-3 text-center uppercase tracking-wide w-[70%]">
                                     {{ $reportData['net_profit'] >= 0 ? 'LABA BERSIH (NET PROFIT):' : 'RUGI BERSIH (NET LOSS):' }}
                                 </td>
