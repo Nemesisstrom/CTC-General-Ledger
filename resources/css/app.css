@@ -1,5 +1,10 @@
 
 @import 'tailwindcss';
+@import './base.css';
+@import './layouts.css';
+@import './components.css';
+@import './themes.css';
+@import './reports/print.css';
 
 /* Laravel Blade Sources */
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';

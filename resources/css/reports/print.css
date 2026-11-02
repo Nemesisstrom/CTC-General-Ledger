@@ -1,0 +1,422 @@
+.report-page--profit-loss,
+.report-page--general-ledger,
+.report-page--balance-sheet,
+.report-page--profit-loss .document-sheet,
+.report-page--general-ledger .document-sheet,
+.report-page--balance-sheet .document-sheet,
+.report-page--profit-loss .report-table-wrapper,
+.report-page--general-ledger .report-table-wrapper,
+.report-page--balance-sheet .report-table-wrapper {
+    overflow: visible !important;
+    max-width: 100% !important;
+}
+
+.report-page--profit-loss { page: profit-loss; }
+.report-page--general-ledger { page: general-ledger; }
+.report-page--balance-sheet { page: balance-sheet; }
+
+@page profit-loss {
+    size: A4 portrait;
+    margin: 8mm;
+}
+
+@page general-ledger {
+    size: A4 landscape;
+    margin: 8mm;
+}
+
+@page balance-sheet {
+    size: A4 portrait;
+    margin: 8mm;
+}
+
+@media print {
+    .report-page--profit-loss *,
+    .report-page--general-ledger *,
+    .report-page--balance-sheet *,
+    .report-page--tax *,
+    .report-page--payroll * {
+        background-color: transparent !important;
+        border-color: #94A3B8 !important;
+        transition: none !important;
+    }
+
+    .report-page--profit-loss table,
+    .report-page--general-ledger table,
+    .report-page--balance-sheet table,
+    .report-page--tax table,
+    .report-page--payroll table {
+        border-collapse: collapse !important;
+    }
+
+    .report-page--profit-loss th,
+    .report-page--profit-loss td,
+    .report-page--general-ledger th,
+    .report-page--general-ledger td,
+    .report-page--balance-sheet th,
+    .report-page--balance-sheet td,
+    .report-page--tax th,
+    .report-page--tax td,
+    .report-page--payroll th,
+    .report-page--payroll td {
+        border: 1px solid #94A3B8 !important;
+    }
+
+    .report-page--profit-loss th,
+    .report-page--general-ledger th,
+    .report-page--balance-sheet th,
+    .report-page--tax th,
+    .report-page--payroll th {
+        background-color: #F1F5F9 !important;
+        color: #0F172A !important;
+    }
+
+    html,
+    body {
+        color-scheme: light !important;
+        background: #FFFFFF !important;
+        color: #111827 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        transition: none !important;
+    }
+
+    .app-sidebar,
+    .app-topbar,
+    .app-sidebar-backdrop,
+    footer,
+    .no-print {
+        display: none !important;
+    }
+
+    .app-shell,
+    main,
+    #app-main,
+    .report-page--profit-loss,
+    .report-page--general-ledger,
+    .report-page--balance-sheet,
+    .report-page--tax,
+    .report-page--payroll {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+        overflow: visible !important;
+    }
+
+    .report-page--profit-loss .document-sheet,
+    .report-page--general-ledger .document-sheet,
+    .report-page--balance-sheet .document-sheet {
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        background: #FFFFFF !important;
+        color: #111827 !important;
+    }
+
+    .report-page--tax .bg-white,
+    .report-page--payroll .bg-white {
+        background: #FFFFFF !important;
+        color: #111827 !important;
+    }
+
+    .report-page--tax .shadow-sm,
+    .report-page--payroll .shadow-sm {
+        box-shadow: none !important;
+    }
+
+    .report-page--profit-loss .report-section-block,
+    .report-page--balance-sheet .report-section-block,
+    .report-page--general-ledger .report-account-block {
+        page-break-inside: avoid !important;
+        margin-bottom: 20px !important;
+    }
+
+    .report-page--profit-loss table,
+    .report-page--balance-sheet table,
+    .report-page--general-ledger table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        table-layout: fixed !important;
+    }
+
+    .report-page--profit-loss table,
+    .report-page--balance-sheet table {
+        font-size: 8.5pt !important;
+    }
+
+    .report-page--general-ledger table {
+        font-size: 8pt !important;
+    }
+
+    .report-page--profit-loss th,
+    .report-page--profit-loss td,
+    .report-page--balance-sheet th,
+    .report-page--balance-sheet td {
+        border: 1px solid #94A3B8 !important;
+        padding: 5px 6px !important;
+        vertical-align: middle !important;
+        word-wrap: break-word !important;
+    }
+
+    .report-page--general-ledger th,
+    .report-page--general-ledger td {
+        border: 1px solid #94A3B8 !important;
+        padding: 4px 5px !important;
+        vertical-align: middle !important;
+        word-wrap: break-word !important;
+    }
+
+    .report-page--profit-loss th,
+    .report-page--balance-sheet th,
+    .report-page--general-ledger th {
+        background-color: #F1F5F9 !important;
+        color: #0F172A !important;
+        font-weight: 700 !important;
+    }
+
+    .report-page--profit-loss .print-signature,
+    .report-page--balance-sheet .print-signature,
+    .report-page--general-ledger .print-signature {
+        display: flex !important;
+        page-break-inside: avoid !important;
+    }
+
+    .report-page--profit-loss .document-sheet tr.net-profit,
+    .report-page--profit-loss .document-sheet tr.net-profit td {
+        background: #D1FAE5 !important;
+        color: #065F46 !important;
+        border-color: #059669 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .report-page--profit-loss .document-sheet tr.net-profit td:last-child {
+        color: #047857 !important;
+    }
+
+    .report-page--profit-loss .document-sheet tr.net-loss,
+    .report-page--profit-loss .document-sheet tr.net-loss td {
+        background: #FEE2E2 !important;
+        color: #991B1B !important;
+        border-color: #DC2626 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .report-page--profit-loss .document-sheet tr.net-loss td:last-child {
+        color: #DC2626 !important;
+    }
+
+    html.dark,
+    html.dark body {
+        color-scheme: light !important;
+        background: #FFFFFF !important;
+        color: #111827 !important;
+    }
+
+    html.dark .report-page--profit-loss *,
+    html.dark .report-page--general-ledger *,
+    html.dark .report-page--balance-sheet *,
+    html.dark .report-page--tax *,
+    html.dark .report-page--payroll * {
+        background-color: transparent !important;
+        border-color: #94A3B8 !important;
+        color: #111827 !important;
+    }
+
+    html.dark table,
+    html.dark tbody,
+    html.dark thead,
+    html.dark tr,
+    html.dark td,
+    html.dark th {
+        border-color: #CBD5E1 !important;
+        color: #111827 !important;
+    }
+
+    html.dark tr[class~="bg-emerald-50/80"],
+    html.dark tr[class~="bg-emerald-50"] {
+        background-color: #D1FAE5 !important;
+    }
+
+    html.dark tr[class~="bg-red-50/80"],
+    html.dark tr[class~="bg-red-50"] {
+        background-color: #FEE2E2 !important;
+    }
+
+    html.dark tr[class~="bg-gray-50"] {
+        background-color: #F9FAFB !important;
+    }
+
+    html.dark tr[class~="bg-gray-100"] {
+        background-color: #F3F4F6 !important;
+    }
+
+    html.dark .text-emerald-700,
+    html.dark .text-emerald-800,
+    html.dark .text-emerald-900 {
+        color: #047857 !important;
+    }
+
+    html.dark .text-green-500,
+    html.dark .text-green-600,
+    html.dark .text-green-700,
+    html.dark .text-green-800,
+    html.dark .text-green-900 {
+        color: #047857 !important;
+    }
+
+    html.dark .text-red-500,
+    html.dark .text-red-600,
+    html.dark .text-red-700,
+    html.dark .text-red-800,
+    html.dark .text-red-900,
+    html.dark .text-rose-500,
+    html.dark .text-rose-600,
+    html.dark .text-rose-700,
+    html.dark .text-rose-800,
+    html.dark .text-rose-900 {
+        color: #B91C1C !important;
+    }
+
+    html.dark .text-blue-600,
+    html.dark .text-blue-700,
+    html.dark .text-blue-800 {
+        color: #1D4ED8 !important;
+    }
+
+    html.dark .text-amber-500,
+    html.dark .text-amber-600,
+    html.dark .text-amber-700,
+    html.dark .text-amber-800 {
+        color: #D97706 !important;
+    }
+
+    html.dark .report-page--profit-loss .document-sheet tr.net-profit,
+    html.dark .report-page--profit-loss .document-sheet tr.net-profit td {
+        background: #D1FAE5 !important;
+        color: #065F46 !important;
+        border-color: #059669 !important;
+    }
+
+    html.dark .report-page--profit-loss .document-sheet tr.net-profit td:last-child {
+        color: #047857 !important;
+    }
+
+    html.dark .report-page--profit-loss .document-sheet tr.net-loss,
+    html.dark .report-page--profit-loss .document-sheet tr.net-loss td {
+        background: #FEE2E2 !important;
+        color: #991B1B !important;
+        border-color: #DC2626 !important;
+    }
+
+    html.dark .report-page--profit-loss .document-sheet tr.net-loss td:last-child {
+        color: #DC2626 !important;
+    }
+
+    html.dark .report-page--profit-loss .document-sheet[class*="bg-white"],
+    html.dark .report-page--general-ledger .document-sheet[class*="bg-white"],
+    html.dark .report-page--balance-sheet .document-sheet[class*="bg-white"],
+    html.dark .report-page--tax [class*="bg-white"]:not(button):not(.badge),
+    html.dark .report-page--payroll [class*="bg-white"]:not(button):not(.badge) {
+        background: #FFFFFF !important;
+        color: #111827 !important;
+    }
+
+    html.dark .report-page--profit-loss [class*="text-gray-"],
+    html.dark .report-page--profit-loss [class*="text-slate-"],
+    html.dark .report-page--profit-loss [class*="text-neutral-"],
+    html.dark .report-page--profit-loss [class*="text-[#"],
+    html.dark .report-page--profit-loss [class*="text-black"],
+    html.dark .report-page--general-ledger [class*="text-gray-"],
+    html.dark .report-page--general-ledger [class*="text-slate-"],
+    html.dark .report-page--general-ledger [class*="text-neutral-"],
+    html.dark .report-page--general-ledger [class*="text-[#"],
+    html.dark .report-page--general-ledger [class*="text-black"],
+    html.dark .report-page--balance-sheet [class*="text-gray-"],
+    html.dark .report-page--balance-sheet [class*="text-slate-"],
+    html.dark .report-page--balance-sheet [class*="text-neutral-"],
+    html.dark .report-page--balance-sheet [class*="text-[#"],
+    html.dark .report-page--balance-sheet [class*="text-black"],
+    html.dark .report-page--tax [class*="text-gray-"],
+    html.dark .report-page--tax [class*="text-slate-"],
+    html.dark .report-page--tax [class*="text-neutral-"],
+    html.dark .report-page--tax [class*="text-[#"],
+    html.dark .report-page--tax [class*="text-black"],
+    html.dark .report-page--payroll [class*="text-gray-"],
+    html.dark .report-page--payroll [class*="text-slate-"],
+    html.dark .report-page--payroll [class*="text-neutral-"],
+    html.dark .report-page--payroll [class*="text-[#"],
+    html.dark .report-page--payroll [class*="text-black"] {
+        color: #111827 !important;
+    }
+
+    html.dark .report-page--profit-loss th,
+    html.dark .report-page--general-ledger th,
+    html.dark .report-page--balance-sheet th {
+        background-color: #F1F5F9 !important;
+        color: #0F172A !important;
+    }
+
+    html.dark .report-page--profit-loss .text-emerald-700,
+    html.dark .report-page--profit-loss .text-emerald-800,
+    html.dark .report-page--profit-loss .text-emerald-900,
+    html.dark .report-page--general-ledger .text-emerald-700,
+    html.dark .report-page--general-ledger .text-emerald-800,
+    html.dark .report-page--general-ledger .text-emerald-900,
+    html.dark .report-page--balance-sheet .text-emerald-700,
+    html.dark .report-page--balance-sheet .text-emerald-800,
+    html.dark .report-page--balance-sheet .text-emerald-900,
+    html.dark .report-page--tax .text-emerald-700,
+    html.dark .report-page--tax .text-emerald-800,
+    html.dark .report-page--tax .text-emerald-900,
+    html.dark .report-page--payroll .text-emerald-700,
+    html.dark .report-page--payroll .text-emerald-800,
+    html.dark .report-page--payroll .text-emerald-900 {
+        color: #047857 !important;
+    }
+
+    html.dark .report-page--profit-loss [class*="text-red-"],
+    html.dark .report-page--profit-loss [class*="text-rose-"],
+    html.dark .report-page--general-ledger [class*="text-red-"],
+    html.dark .report-page--general-ledger [class*="text-rose-"],
+    html.dark .report-page--balance-sheet [class*="text-red-"],
+    html.dark .report-page--balance-sheet [class*="text-rose-"],
+    html.dark .report-page--tax [class*="text-red-"],
+    html.dark .report-page--tax [class*="text-rose-"],
+    html.dark .report-page--payroll [class*="text-red-"],
+    html.dark .report-page--payroll [class*="text-rose-"] {
+        color: #B91C1C !important;
+    }
+
+    html.dark .report-page--profit-loss [class*="text-green-"],
+    html.dark .report-page--general-ledger [class*="text-green-"],
+    html.dark .report-page--balance-sheet [class*="text-green-"],
+    html.dark .report-page--tax [class*="text-green-"],
+    html.dark .report-page--payroll [class*="text-green-"] {
+        color: #047857 !important;
+    }
+
+    html.dark .report-page--profit-loss [class*="text-blue-"],
+    html.dark .report-page--general-ledger [class*="text-blue-"],
+    html.dark .report-page--balance-sheet [class*="text-blue-"],
+    html.dark .report-page--tax [class*="text-blue-"],
+    html.dark .report-page--payroll [class*="text-blue-"] {
+        color: #1D4ED8 !important;
+    }
+
+    html.dark .report-page--profit-loss [class*="text-amber-"],
+    html.dark .report-page--general-ledger [class*="text-amber-"],
+    html.dark .report-page--balance-sheet [class*="text-amber-"],
+    html.dark .report-page--tax [class*="text-amber-"],
+    html.dark .report-page--payroll [class*="text-amber-"] {
+        color: #D97706 !important;
+    }
+}

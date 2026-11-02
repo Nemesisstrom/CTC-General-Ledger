@@ -7,4 +7,6 @@
  */
 
 import './echo';
-// Application JavaScript
+import { restoreSidebarScroll } from './modules/sidebar';
+
+restoreSidebarScroll();
