@@ -14,6 +14,9 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    private const REGISTRATION_ROLE = 'staff';
+    private const REGISTRATION_BASE_SALARY = 0;
+
     // --- WEB UI METHODS ---
     public function showLoginForm()
     {
@@ -80,12 +83,12 @@ class AuthController extends Controller
             'name'        => $request->name,
             'email'       => $request->email,
             'password'    => Hash::make($request->password),
-            'role'        => strtolower($request->role),
-            'base_salary' => $request->base_salary ?? 0,
+            'role'        => self::REGISTRATION_ROLE,
+            'base_salary' => self::REGISTRATION_BASE_SALARY,
             'is_active'   => true,
         ]);
 
-        $user->assignRole(strtolower($request->role));
+        $user->assignRole(self::REGISTRATION_ROLE);
 
         // Menggunakan helper event() standar (bukan broadcast())
         event(new Registered($user));
@@ -139,12 +142,12 @@ class AuthController extends Controller
             'name'        => $request->name,
             'email'       => $request->email,
             'password'    => Hash::make($request->password),
-            'role'        => strtolower($request->role),
-            'base_salary' => $request->base_salary ?? 0,
+            'role'        => self::REGISTRATION_ROLE,
+            'base_salary' => self::REGISTRATION_BASE_SALARY,
             'is_active'   => true,
         ]);
 
-        $user->assignRole(strtolower($request->role));
+        $user->assignRole(self::REGISTRATION_ROLE);
 
         event(new Registered($user));
 

@@ -109,24 +109,7 @@
                 </div>
             </div>
 
-            {{-- Role Akun Operasional (Default: -- Pilih Role Operasional --) --}}
-            <div>
-                <label for="role" class="block text-xs font-bold text-[#526057] mb-1">Role/Divisi Operasional</label>
-                <div class="relative">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 pointer-events-none">
-                        <i class="fa-solid fa-user-shield text-xs"></i>
-                    </span>
-                    <select id="role" name="role" required class="w-full pl-10 pr-8 py-2 bg-[#F9FBF9] border border-[#E1E8E2] rounded-xl text-xs text-[#202B25] outline-none transition focus:border-[#176B45] focus:bg-white focus:ring-2 focus:ring-[#176B45]/10 appearance-none">
-                        <option value="">-- Pilih Role Operasional --</option>
-                        <option value="akuntan" {{ old('role') == 'akuntan' ? 'selected' : '' }}>Akuntan / Finance</option>
-                        <option value="staff" {{ old('role') == 'staff' ? 'selected' : '' }}>Staff Operasional</option>
-                    </select>
-                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 pointer-events-none">
-                        <i class="fa-solid fa-chevron-down text-[10px]"></i>
-                    </span>
-                </div>
-                <p class="text-[10px] text-gray-400 mt-1">*Akun Administrator khusus dikelola oleh Manajemen Admin Pusat.</p>
-            </div>
+            <p class="text-[10px] text-gray-400">Akun baru akan diberikan akses Staff Operasional. Akses lainnya dikelola oleh administrator.</p>
 
             {{-- Kata Sandi --}}
             <div>
