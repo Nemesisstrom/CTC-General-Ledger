@@ -25,7 +25,7 @@ class TaxSeeder extends Seeder
                 'code'       => 'PPN11',
                 'name'       => 'PPN 11% (Pajak Pertambahan Nilai)',
                 'rate'       => 11.00,
-                'type'       => 'ppn', // Disesuaikan dari 'inclusive' ke 'ppn'
+                'type'       => 'PPN',
                 'account_id' => $taxAccount->id,
                 'is_active'  => true,
             ],
@@ -33,7 +33,7 @@ class TaxSeeder extends Seeder
                 'code'       => 'PPH23',
                 'name'       => 'PPh Pasal 23 (Potongan Jasa 2%)',
                 'rate'       => 2.00,
-                'type'       => 'pph23', // Disesuaikan dari 'withholding' ke 'pph23' atau 'pph'
+                'type'       => 'PPh23',
                 'account_id' => $taxAccount->id,
                 'is_active'  => true,
             ],
@@ -41,7 +41,7 @@ class TaxSeeder extends Seeder
                 'code'       => 'PPH21',
                 'name'       => 'PPh Pasal 21 (Potongan Perorangan)',
                 'rate'       => 5.00,
-                'type'       => 'pph21', // Disesuaikan dari 'withholding' ke 'pph21' atau 'pph'
+                'type'       => 'PPh21',
                 'account_id' => $taxAccount->id,
                 'is_active'  => true,
             ],
