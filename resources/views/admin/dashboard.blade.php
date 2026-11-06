@@ -43,15 +43,21 @@
                 </article>
 
                 {{-- Kas Keluar --}}
-                <article class="group min-w-0 rounded-2xl border border-[#E1E8E2] border-t-4 border-t-[#68756D] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5">
+                <article class="group min-w-0 rounded-2xl border border-[#E1E8E2] border-t-4 border-t-red-500 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5">
                     <div class="flex items-center justify-between gap-2">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-[#68756D]">Kas Keluar</p>
-                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F6F8F6] text-[#68756D] transition group-hover:bg-[#E1E8E2] sm:h-10 sm:w-10" aria-hidden="true">
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m0 0l7-7m-7 7l-7-7"/></svg>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-[#68756D]">
+                            Kas Keluar
+                        </p>
+
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 transition group-hover:bg-red-100 sm:h-10 sm:w-10" aria-hidden="true">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m0 0l7-7m-7 7l-7-7"/>
+                            </svg>
                         </span>
                     </div>
+
                     <div class="mt-3 min-w-0 overflow-hidden">
-                        <p class="whitespace-nowrap tabular-nums text-lg font-bold tracking-tight text-[#202B25] sm:text-xl lg:text-2xl">
+                        <p class="whitespace-nowrap tabular-nums text-lg font-bold tracking-tight text-red-600 sm:text-xl lg:text-2xl">
                             Rp {{ number_format($data['kas_keluar'] ?? 0, 0, ',', '.') }}
                         </p>
                     </div>

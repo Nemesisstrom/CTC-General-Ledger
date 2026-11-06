@@ -8,6 +8,7 @@ use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Hash;
 use Database\Seeders\ChartOfAccountSeeder;
+use Database\Seeders\TaxSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -54,6 +55,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolePermissionSeeder::class,
             ChartOfAccountSeeder::class,
+            TaxSeeder::class,
         ]);
     }
 }
