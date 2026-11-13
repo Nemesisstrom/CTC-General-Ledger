@@ -7,3 +7,6 @@
  */
 
 import './echo';
+import { restoreSidebarScroll } from './modules/sidebar';
+
+restoreSidebarScroll();

@@ -1,0 +1,89 @@
+/* Warna RGB untuk hasil Laba/Rugi Bersih */
+.net-profit {
+    background-color: #D1FAE5 !important;
+    border-color: #059669 !important;
+    color: #065F46 !important;
+}
+
+.net-loss {
+    background-color: #FEE2E2 !important;
+    border-color: #DC2626 !important;
+    color: #991B1B !important;
+}
+
+/* Warna nominal agar tetap kontras */
+.net-profit td:last-child {
+    color: #047857 !important;
+}
+
+.net-loss td:last-child {
+    color: #DC2626 !important;
+}
+
+/* Pertahankan warna saat dark mode */
+html.dark .net-profit {
+    background-color: #064E3B !important;
+    border-color: #10B981 !important;
+    color: #D1FAE5 !important;
+}
+
+html.dark .net-loss {
+    background-color: #7F1D1D !important;
+    border-color: #EF4444 !important;
+    color: #FEE2E2 !important;
+}
+
+html.dark .net-profit td:last-child {
+    color: #6EE7B7 !important;
+}
+
+html.dark .net-loss td:last-child {
+    color: #FCA5A5 !important;
+}
+.mono-card {
+    background-color: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    transition: background-color 200ms ease, border-color 200ms ease;
+}
+
+.mono-table thead {
+    background-color: var(--bg-main);
+    border-bottom: 1px solid var(--border-color);
+}
+.mono-table th {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.mono-table td {
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+/* SEMANTIC BADGES */
+.badge-success {
+    background-color: var(--color-success-bg);
+    border: 1px solid var(--color-success-border);
+    color: var(--color-success);
+}
+.badge-danger {
+    background-color: var(--color-danger-bg);
+    border: 1px solid var(--color-danger-border);
+    color: var(--color-danger);
+}
+.badge-warning {
+    background-color: var(--color-warning-bg);
+    border: 1px solid var(--color-warning-border);
+    color: var(--color-warning);
+}
+.badge-info {
+    background-color: var(--color-info-bg);
+    border: 1px solid var(--color-info-border);
+    color: var(--color-info);
+}
+
+.btn-press { transition: transform 0.15s ease, background-color 0.15s ease; }
+.btn-press:active { transform: scale(0.96); }
