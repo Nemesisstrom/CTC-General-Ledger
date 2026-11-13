@@ -7,26 +7,36 @@ use App\Http\Requests\StoreAdjustmentRequest;
 use App\Models\ChartOfAccount;
 use App\Models\Journal;
 use App\Models\JournalDetail;
+use App\Traits\ChecksClosedPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
 class AdjustmentController extends Controller
 {
+    use ChecksClosedPeriod;
+
     public function index(Request $request)
     {
         $adjustments = Journal::with(['details.account', 'creator'])
-            ->where('journal_number', 'LIKE', 'ADJ-%')
+            ->where(function ($q) {
+                $q->where('journal_number', 'LIKE', 'ADJ-%')
+                  ->orWhere('journal_number', 'LIKE', 'JRN-CLS-%');
+            })
             ->orderBy('journal_date', 'desc')
             ->orderBy('id', 'desc')
             ->paginate(15);
 
         $expenseAccounts = ChartOfAccount::where('type', 'expense')
             ->where('is_active', true)
+            ->whereNotNull('parent_id')
+            ->orderBy('code')
             ->get();
 
         $accumulatedAccounts = ChartOfAccount::whereIn('type', ['asset', 'liability', 'equity'])
             ->where('is_active', true)
+            ->whereNotNull('parent_id')
+            ->orderBy('code')
             ->get();
 
         if ($request->wantsJson()) {
@@ -38,10 +48,30 @@ class AdjustmentController extends Controller
 
     public function store(StoreAdjustmentRequest $request)
     {
+        // Cek apakah tahun penyesuaian sudah di-Tutup Buku
+        if ($this->isPeriodClosed($request->adjustment_date)) {
+            return redirect()
+                ->back()
+                ->with('error', $this->closedPeriodMessage($request->adjustment_date))
+                ->withInput();
+        }
+
         DB::beginTransaction();
         try {
-            $nextId = (Journal::max('id') ?? 0) + 1;
-            $journalNumber = 'ADJ-' . date('Ym') . '-' . sprintf('%04d', $nextId);
+            $ymCode = date('Ym', strtotime($request->adjustment_date));
+            $lastAdj = Journal::where('journal_number', 'like', "ADJ-{$ymCode}-%")
+                ->lockForUpdate()
+                ->orderByDesc('journal_number')
+                ->first();
+
+            $lastSequence = 0;
+            if ($lastAdj) {
+                $parts = explode('-', $lastAdj->journal_number);
+                $lastSequence = (int) end($parts);
+            }
+
+            $journalNumber = 'ADJ-' . $ymCode . '-' . sprintf('%04d', $lastSequence + 1);
+            $amount = round((float) $request->amount, 2);
 
             $journal = Journal::create([
                 'journal_number'   => $journalNumber,
@@ -55,7 +85,7 @@ class AdjustmentController extends Controller
             JournalDetail::create([
                 'journal_id' => $journal->id,
                 'account_id' => $request->expense_account_id,
-                'debit'      => $request->amount,
+                'debit'      => $amount,
                 'credit'     => 0,
                 'memo'       => 'Penyesuaian: ' . $request->description,
             ]);
@@ -64,7 +94,7 @@ class AdjustmentController extends Controller
                 'journal_id' => $journal->id,
                 'account_id' => $request->accumulated_account_id,
                 'debit'      => 0,
-                'credit'     => $request->amount,
+                'credit'     => $amount,
                 'memo'       => 'Penyesuaian: ' . $request->description,
             ]);
 
@@ -85,6 +115,11 @@ class AdjustmentController extends Controller
     public function reverse($id)
     {
         $original = Journal::with('details')->findOrFail($id);
+
+        // Cek apakah tahun penyesuaian asli sudah di-Tutup Buku
+        if ($this->isPeriodClosed($original->journal_date)) {
+            return redirect()->back()->with('error', $this->closedPeriodMessage($original->journal_date));
+        }
 
         if ($original->status === 'reversed') {
             return redirect()->back()->with('error', 'Jurnal ini sudah pernah dibatalkan.');
@@ -107,8 +142,8 @@ class AdjustmentController extends Controller
                 JournalDetail::create([
                     'journal_id' => $reversal->id,
                     'account_id' => $detail->account_id,
-                    'debit'      => $detail->credit, // Tukar Debit & Kredit
-                    'credit'     => $detail->debit,
+                    'debit'      => round((float) $detail->credit, 2), // Tukar Debit & Kredit
+                    'credit'     => round((float) $detail->debit, 2),
                     'memo'       => 'Pembalik otomatis ' . $original->journal_number,
                 ]);
             }
@@ -131,7 +166,15 @@ class AdjustmentController extends Controller
      */
     public function destroy($id)
     {
+        if (!auth()->user()->hasRole('admin')) {
+            abort(403, 'Hanya Administrator yang memiliki otoritas menghapus jurnal penyesuaian.');
+        }
+
         $journal = Journal::findOrFail($id);
+
+        if ($this->isPeriodClosed($journal->journal_date)) {
+            return redirect()->back()->with('error', $this->closedPeriodMessage($journal->journal_date));
+        }
 
         DB::beginTransaction();
         try {

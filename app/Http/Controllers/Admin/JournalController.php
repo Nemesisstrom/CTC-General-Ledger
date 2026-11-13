@@ -7,12 +7,15 @@ use App\Http\Requests\StoreJournalRequest;
 use App\Models\ChartOfAccount;
 use App\Models\Journal;
 use App\Models\JournalDetail;
+use App\Traits\ChecksClosedPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
 class JournalController extends Controller
 {
+    use ChecksClosedPeriod;
+
     public function index(Request $request)
     {
         $journals = Journal::with(['details.account', 'creator'])
@@ -21,6 +24,7 @@ class JournalController extends Controller
             ->paginate(15);
 
         $accounts = ChartOfAccount::where('is_active', true)
+            ->whereNotNull('parent_id')
             ->orderBy('code', 'asc')
             ->get();
 
@@ -40,6 +44,7 @@ class JournalController extends Controller
         $postedJournals = Journal::with(['details.account', 'creator'])
             ->where('status', 'posted')
             ->where('journal_number', 'NOT LIKE', 'REV-%')
+            ->where('journal_number', 'NOT LIKE', 'JRN-CLS-%')
             ->orderBy('journal_date', 'desc')
             ->orderBy('id', 'desc')
             ->paginate(10, ['*'], 'posted_page');
@@ -60,15 +65,37 @@ class JournalController extends Controller
     public function store(StoreJournalRequest $request)
     {
         $validated = $request->validated();
+        $journalDate = $validated['transaction_date'] ?? $validated['journal_date'];
+
+        // Cek apakah tahun jurnal sudah di-Tutup Buku
+        if ($this->isPeriodClosed($journalDate)) {
+            if ($request->wantsJson()) {
+                return response()->json(['error' => $this->closedPeriodMessage($journalDate)], 422);
+            }
+            return back()
+                ->withInput()
+                ->with('error', $this->closedPeriodMessage($journalDate));
+        }
 
         DB::beginTransaction();
         try {
-            $nextId = (Journal::max('id') ?? 0) + 1;
-            $journalNumber = 'JRN-' . date('Ym') . '-' . sprintf('%04d', $nextId);
+            $ymCode = date('Ym', strtotime($journalDate));
+            $lastJournal = Journal::where('journal_number', 'like', "JRN-{$ymCode}-%")
+                ->lockForUpdate()
+                ->orderByDesc('journal_number')
+                ->first();
+
+            $lastSequence = 0;
+            if ($lastJournal) {
+                $parts = explode('-', $lastJournal->journal_number);
+                $lastSequence = (int) end($parts);
+            }
+
+            $journalNumber = 'JRN-' . $ymCode . '-' . sprintf('%04d', $lastSequence + 1);
 
             $journal = Journal::create([
                 'journal_number'   => $journalNumber,
-                'journal_date'     => $validated['transaction_date'] ?? $validated['journal_date'],
+                'journal_date'     => $journalDate,
                 'reference_number' => $validated['reference_number'] ?? null,
                 'description'      => $validated['description'] ?? null,
                 'status'           => 'posted',
@@ -78,8 +105,8 @@ class JournalController extends Controller
             foreach ($validated['items'] as $item) {
                 $journal->details()->create([
                     'account_id' => $item['account_id'] ?? $item['chart_of_account_id'],
-                    'debit'      => $item['debit'],
-                    'credit'     => $item['credit'],
+                    'debit'      => round((float) $item['debit'], 2),
+                    'credit'     => round((float) $item['credit'], 2),
                     'memo'       => $item['memo'] ?? null,
                 ]);
             }
@@ -114,6 +141,14 @@ class JournalController extends Controller
     {
         $originalJournal = Journal::with('details')->findOrFail($id);
 
+        // Cek apakah tahun jurnal asli sudah di-Tutup Buku
+        if ($this->isPeriodClosed($originalJournal->journal_date)) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $this->closedPeriodMessage($originalJournal->journal_date)], 422);
+            }
+            return redirect()->back()->with('error', $this->closedPeriodMessage($originalJournal->journal_date));
+        }
+
         if ($originalJournal->status === 'reversed') {
             if ($request->wantsJson()) {
                 return response()->json(['message' => 'Jurnal ini sudah pernah dibatalkan sebelumnya.'], 422);
@@ -138,8 +173,8 @@ class JournalController extends Controller
                 JournalDetail::create([
                     'journal_id' => $reversalJournal->id,
                     'account_id' => $detail->account_id ?? $detail->chart_of_account_id,
-                    'debit'      => $detail->credit,
-                    'credit'     => $detail->debit,
+                    'debit'      => round((float) $detail->credit, 2),
+                    'credit'     => round((float) $detail->debit, 2),
                     'memo'       => 'Pembalikan otomatis dari ' . $originalJournal->journal_number,
                 ]);
             }

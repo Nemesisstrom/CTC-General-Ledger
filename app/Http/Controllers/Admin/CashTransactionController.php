@@ -8,12 +8,16 @@ use App\Models\CashTransaction;
 use App\Models\ChartOfAccount;
 use App\Models\Journal;
 use App\Models\JournalDetail;
+use App\Traits\ChecksClosedPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Exception;
 
 class CashTransactionController extends Controller
 {
+    use ChecksClosedPeriod;
+
     public function index(Request $request)
     {
         // 1. Ambil riwayat transaksi kas & bank terbaru beserta relasi akunnya
@@ -45,12 +49,39 @@ class CashTransactionController extends Controller
 
     public function store(StoreCashTransactionRequest $request)
     {
+        // Celah 1: Blokir input jika tahun transaksi sudah di-Tutup Buku
+        if ($this->isPeriodClosed($request->transaction_date)) {
+            if ($request->wantsJson()) {
+                return response()->json(['error' => $this->closedPeriodMessage($request->transaction_date)], 422);
+            }
+
+            return back()
+                ->with('error', $this->closedPeriodMessage($request->transaction_date))
+                ->withInput();
+        }
+
         DB::beginTransaction();
         try {
-            // 1. Generate Nomor Transaksi Unik (Aman dari Duplikasi)
-            $nextId = (CashTransaction::max('id') ?? 0) + 1;
+            // Celah 2: Penomoran unik anti-bentrok (lockForUpdate) mengikuti bulan transaksi
+            $trxTimestamp = strtotime($request->transaction_date);
+            $ymCode = date('Ym', $trxTimestamp);
             $prefix = $request->type === 'in' ? 'TRX-IN-' : 'TRX-OUT-';
-            $transactionNumber = $prefix . date('Ym') . '-' . sprintf('%04d', $nextId);
+
+            $lastTrx = CashTransaction::where('transaction_number', 'like', "{$prefix}{$ymCode}-%")
+                ->lockForUpdate()
+                ->orderByDesc('transaction_number')
+                ->first();
+
+            $lastSequence = 0;
+            if ($lastTrx) {
+                $parts = explode('-', $lastTrx->transaction_number);
+                $lastSequence = (int) end($parts);
+            }
+
+            $transactionNumber = $prefix . $ymCode . '-' . sprintf('%04d', $lastSequence + 1);
+
+            // Celah 3: Pastikan nominal dibulatkan 2 desimal presisi
+            $amount = round((float) $request->amount, 2);
 
             // 2. Simpan Transaksi Kas
             $trx = CashTransaction::create([
@@ -59,7 +90,7 @@ class CashTransactionController extends Controller
                 'type'                => $request->type,
                 'account_id'          => $request->account_id,
                 'opposite_account_id' => $request->opposite_account_id,
-                'amount'              => $request->amount,
+                'amount'              => $amount,
                 'description'         => $request->description,
                 'created_by'          => auth()->id(),
             ]);
@@ -83,7 +114,7 @@ class CashTransactionController extends Controller
                 JournalDetail::create([
                     'journal_id' => $journal->id,
                     'account_id' => $request->account_id,
-                    'debit'      => $request->amount,
+                    'debit'      => $amount,
                     'credit'     => 0,
                     'memo'       => 'Pemasukan Kas/Bank',
                 ]);
@@ -91,7 +122,7 @@ class CashTransactionController extends Controller
                     'journal_id' => $journal->id,
                     'account_id' => $request->opposite_account_id,
                     'debit'      => 0,
-                    'credit'     => $request->amount,
+                    'credit'     => $amount,
                     'memo'       => 'Penerimaan dari ' . $oppositeAccountName,
                 ]);
             } else {
@@ -99,7 +130,7 @@ class CashTransactionController extends Controller
                 JournalDetail::create([
                     'journal_id' => $journal->id,
                     'account_id' => $request->opposite_account_id,
-                    'debit'      => $request->amount,
+                    'debit'      => $amount,
                     'credit'     => 0,
                     'memo'       => 'Pengeluaran untuk ' . $oppositeAccountName,
                 ]);
@@ -107,7 +138,7 @@ class CashTransactionController extends Controller
                     'journal_id' => $journal->id,
                     'account_id' => $request->account_id,
                     'debit'      => 0,
-                    'credit'     => $request->amount,
+                    'credit'     => $amount,
                     'memo'       => 'Pengeluaran Kas/Bank',
                 ]);
             }
@@ -151,10 +182,20 @@ class CashTransactionController extends Controller
             $cashTransaction = CashTransaction::findOrFail($id);
 
             // Lapisan 2: Kunci penghapusan jika tahun transaksi sudah di-Tutup Buku
-            $trxYear = date('Y', strtotime($cashTransaction->transaction_date));
-            if (Journal::where('reference_number', "CLS-{$trxYear}-1231")->exists()) {
-                return back()->with('error', "Transaksi tahun {$trxYear} sudah dikunci (Tutup Buku) dan tidak dapat dihapus. Gunakan menu Jurnal Pembalikan.");
+            if ($this->isPeriodClosed($cashTransaction->transaction_date)) {
+                return back()->with('error', $this->closedPeriodMessage($cashTransaction->transaction_date));
             }
+
+            // Celah 4: Catat jejak audit ke log sistem sebelum hard delete
+            Log::warning('HARD DELETE TRANSAKSI KAS', [
+                'transaction_number' => $cashTransaction->transaction_number,
+                'transaction_date'   => $cashTransaction->transaction_date,
+                'type'               => $cashTransaction->type,
+                'amount'             => $cashTransaction->amount,
+                'description'        => $cashTransaction->description,
+                'deleted_by_id'      => auth()->id(),
+                'deleted_by_name'    => auth()->user()->name ?? 'Admin',
+            ]);
 
             // Cari jurnal otomatis yang diposting dari transaksi kas ini
             $journal = Journal::where('reference_number', $cashTransaction->transaction_number)
