@@ -8,195 +8,158 @@ use App\Models\ChartOfAccount;
 use App\Models\Journal;
 use App\Models\JournalDetail;
 use App\Models\Tax;
-use App\Traits\ChecksClosedPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Exception;
+use Illuminate\Validation\ValidationException;
 
 class TaxController extends Controller
 {
-    use ChecksClosedPeriod;
-
     public function index(Request $request)
     {
-        $taxes = Tax::orderBy('name')->get();
+        $taxes = Tax::with('account')
+            ->orderBy('name')
+            ->get();
 
-        $taxJournals = Journal::with(['details.account', 'creator'])
-            ->where(function ($q) {$q->where('journal_number', 'LIKE', 'TAX-%')
-                  ->orWhere('journal_number', 'LIKE', 'JRN-TAX-%');
+        $taxTransactions = Journal::with(['details.account', 'creator'])
+            ->where(function ($query) {
+                $query->where('journal_number', 'LIKE', 'TAX-%')
+                      ->orWhere('journal_number', 'LIKE', 'JRN-TAX-%');
             })
-            ->orderBy('journal_date', 'desc')
-            ->orderBy('id', 'desc')
+            ->latest('journal_date')
+            ->latest('id')
             ->paginate(15);
-
-        if ($request->wantsJson()) {
-            return response()->json([
-                'taxes'        => $taxes,
-                'tax_journals' => $taxJournals,
-            ]);
-        }
 
         $accounts = ChartOfAccount::where('is_active', true)
             ->whereNotNull('parent_id')
             ->orderBy('code')
             ->get();
 
-        return view('admin.tax.index', compact('taxes', 'taxJournals', 'accounts'));
+        $cashAccounts = ChartOfAccount::where('is_active', true)
+            ->where('type', 'asset')
+            ->whereNotNull('parent_id')
+            ->orderBy('code')
+            ->get();
+
+        $taxAccounts = ChartOfAccount::where('is_active', true)
+            ->whereIn('type', ['liability', 'asset', 'expense'])
+            ->whereNotNull('parent_id')
+            ->orderBy('code')
+            ->get();
+
+        return view('admin.tax.index', compact(
+            'taxes',
+            'taxTransactions',
+            'accounts',
+            'cashAccounts',
+            'taxAccounts'
+        ));
     }
 
-    public function store(Request $request)
+    public function store(StoreTaxTransactionRequest $request)
     {
-        $validated =$request->validate([
-            'name'        => 'required|string|max:100',
-            'code'        => 'required|string|max:30|unique:taxes,code',
-            'rate'        => 'required|numeric|min:0|max:100',
-            'type'        => 'required|in:ppn_in,ppn_out,pph,other',
-            'account_id'  => 'nullable|exists:chart_of_accounts,id',
-            'description' => 'nullable|string|max:255',
-            'is_active'   => 'boolean',
+        $validated = $request->validated();
+
+        $transactionDate = $validated['transaction_date'] ?? $validated['payment_date'] ?? now()->toDateString();
+        $year = date('Y', strtotime($transactionDate));
+
+        $isClosed = Journal::where('journal_number', 'LIKE', "JRN-CLS-{$year}%")
+            ->where('status', 'posted')
+            ->exists();
+
+        if ($isClosed) {
+            throw ValidationException::withMessages([
+                'transaction_date' => ["Tahun buku {$year} sudah ditutup dan tidak dapat menerima transaksi pajak baru."],
+            ]);
+        }
+
+        $journal = DB::transaction(function () use ($validated, $request, $transactionDate) {
+            $tax = isset($validated['tax_id']) ? Tax::find($validated['tax_id']) : null;
+            $taxAccountId = $validated['tax_account_id'] ?? $tax?->account_id;
+            $cashAccountId = $validated['cash_account_id'];
+            $amount = (float) ($validated['tax_amount'] ?? $validated['amount'] ?? 0);
+            $description = $validated['description'] ?? ('Pembayaran / Pencatatan Pajak ' . ($tax?->name ?? ''));
+
+            $dateStr = date('Ymd', strtotime($transactionDate));
+            $prefix = "TAX-{$dateStr}-";
+            $lastJournal = Journal::where('journal_number', 'LIKE', "{$prefix}%")
+                ->lockForUpdate()
+                ->latest('id')
+                ->first();
+
+            $sequence = $lastJournal
+                ? ((int) substr($lastJournal->journal_number, -4)) + 1
+                : 1;
+
+            $journalNumber = $prefix . str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+
+            $journal = Journal::create([
+                'journal_number'   => $journalNumber,
+                'journal_date'     => $transactionDate,
+                'reference_number' => $validated['reference_number'] ?? $journalNumber,
+                'description'      => $description,
+                'status'           => 'posted',
+                'created_by'       => $request->user()->id,
+            ]);
+
+            JournalDetail::create([
+                'journal_id'  => $journal->id,
+                'account_id'  => $taxAccountId,
+                'debit'       => $amount,
+                'credit'      => 0,
+                'description' => $description,
+            ]);
+
+            JournalDetail::create([
+                'journal_id'  => $journal->id,
+                'account_id'  => $cashAccountId,
+                'debit'       => 0,
+                'credit'      => $amount,
+                'description' => $description,
+            ]);
+
+            return $journal;
+        });
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Transaksi pajak berhasil dicatat dan diposting ke jurnal.',
+                'data'    => $journal->load('details.account'),
+            ], 201);
+        }
+
+        return redirect()
+            ->route('admin.taxes.index')
+            ->with('success', 'Transaksi pajak berhasil dicatat dan diposting ke jurnal.');
+    }
+
+    public function storeTaxType(Request $request)
+    {
+        $validated = $request->validate([
+            'name'        => ['required', 'string', 'max:100'],
+            'code'        => ['nullable', 'string', 'max:50', 'unique:taxes,code'],
+            'rate'        => ['required', 'numeric', 'min:0', 'max:100'],
+            'account_id'  => ['nullable', 'exists:chart_of_accounts,id'],
+            'description' => ['nullable', 'string', 'max:255'],
         ]);
 
         $tax = Tax::create([
             'name'        => $validated['name'],
-            'code'        => strtoupper($validated['code']),
-            'rate'        => round((float) $validated['rate'], 2), 'type'        =>$validated['type'],
+            'code'        => $validated['code'] ?? strtoupper(str_replace(' ', '_', $validated['name'])),
+            'rate'        => $validated['rate'],
             'account_id'  => $validated['account_id'] ?? null,
             'description' => $validated['description'] ?? null,
-            'is_active'   => $request->boolean('is_active', true),
+            'is_active'   => true,
         ]);
 
         if ($request->wantsJson()) {
-            return response()->json(['message' => 'Master tarif pajak berhasil ditambahkan.', 'data' => $tax], 201);
+            return response()->json([
+                'message' => 'Master pajak berhasil ditambahkan.',
+                'data'    => $tax,
+            ], 201);
         }
 
         return redirect()
             ->route('admin.taxes.index')
-            ->with('success', 'Master tarif pajak berhasil ditambahkan.');
-    }
-
-    public function update(Request $request, Tax$tax)
-    {
-        $validated =$request->validate([
-            'name'        => 'required|string|max:100',
-            'code'        => 'required|string|max:30|unique:taxes,code,' . $tax->id,
-            'rate'        => 'required|numeric|min:0|max:100',
-            'type'        => 'required|in:ppn_in,ppn_out,pph,other',
-            'account_id'  => 'nullable|exists:chart_of_accounts,id',
-            'description' => 'nullable|string|max:255',
-            'is_active'   => 'boolean',
-        ]);
-
-        $tax->update([
-            'name'        => $validated['name'],
-            'code'        => strtoupper($validated['code']),
-            'rate'        => round((float) $validated['rate'], 2), 'type'        =>$validated['type'],
-            'account_id'  => $validated['account_id'] ?? null,
-            'description' => $validated['description'] ?? null,
-            'is_active'   => $request->boolean('is_active', true),
-        ]);
-
-        if ($request->wantsJson()) {
-            return response()->json(['message' => 'Master tarif pajak berhasil diperbarui.', 'data' => $tax]);
-        }
-
-        return redirect()
-            ->route('admin.taxes.index')
-            ->with('success', 'Master tarif pajak berhasil diperbarui.');
-    }
-
-    public function destroy(Request $request, Tax$tax)
-    {
-        $tax->delete();
-
-        if ($request->wantsJson()) {
-            return response()->json(['message' => 'Master tarif pajak berhasil dihapus.']);
-        }
-
-        return redirect()
-            ->route('admin.taxes.index')
-            ->with('success', 'Master tarif pajak berhasil dihapus.');
-    }
-
-    public function processTaxTransaction(StoreTaxTransactionRequest $request)
-    {
-        $validated =$request->validated();
-        $trxDate =$validated['transaction_date'];
-
-        if ($this->isPeriodClosed($trxDate)) {$msg = $this->closedPeriodMessage($trxDate);
-            if ($request->wantsJson()) {
-                return response()->json(['message' => $msg], 422);
-            }
-            return back()->with('error', $msg)->withInput();
-        }
-
-        DB::beginTransaction();
-        try {
-            $tax = Tax::findOrFail($validated['tax_id']);$baseAmount = round((float) $validated['base_amount'], 2);$taxAmount  = round($baseAmount * ((float)$tax->rate / 100), 2);
-
-            if ($taxAmount <= 0) {
-                throw new Exception('Nominal pajak terhitung harus lebih besar dari Rp 0.');
-            }
-
-            $ymCode = date('Ym', strtotime($trxDate));
-            $lastTaxJrn = Journal::where('journal_number', 'like', "JRN-TAX-{$ymCode}-%")
-                ->lockForUpdate()
-                ->orderByDesc('journal_number')
-                ->first();
-
-            $lastSeq = 0;
-            if ($lastTaxJrn) {
-                $parts = explode('-',$lastTaxJrn->journal_number);
-                $lastSeq = (int) end($parts);
-            }
-
-            $taxRefNumber = 'TAX-' . $ymCode . '-' . sprintf('\%04d', $lastSeq + 1);
-
-            $journal = Journal::create([
-                'journal_number'   => 'JRN-' . $taxRefNumber,
-                'journal_date'     => $trxDate,
-                'reference_number' => $taxRefNumber,
-                'description'      => "[Pajak - {$tax->name} ({$tax->rate}\%)] " . ($validated['description'] ?? 'Pencatatan Pajak'),
-                'status'           => 'posted',
-                'created_by'       => auth()->id(),
-            ]);
-
-            JournalDetail::create([
-                'journal_id' => $journal->id,
-                'account_id' => $validated['debit_account_id'],
-                'debit'      => $taxAmount,
-                'credit'     => 0,
-                'memo'       => "Pajak {$tax->name} (DPP: Rp " . number_format($baseAmount, 0, ',', '.') . ")",
-            ]);
-
-            JournalDetail::create([
-                'journal_id' => $journal->id,
-                'account_id' => $validated['credit_account_id'],
-                'debit'      => 0,
-                'credit'     => $taxAmount,
-                'memo'       => "Pajak {$tax->name} (DPP: Rp " . number_format($baseAmount, 0, ',', '.') . ")",
-            ]);
-
-            DB::commit();
-
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'message' => "Transaksi pajak {$taxRefNumber} berhasil diposting ke jurnal.",
-                    'data'    => $journal->load('details.account'),
-                ], 201);
-            }
-
-            return redirect()
-                ->route('admin.taxes.index')
-                ->with('success', "Transaksi pajak {$taxRefNumber} sebesar Rp " . number_format($taxAmount, 0, ',', '.') . " berhasil diposting ke jurnal.");
-
-        } catch (Exception $e) {
-            DB::rollBack();
-            if ($request->wantsJson()) {
-                return response()->json(['message' => 'Gagal memproses transaksi pajak: ' . $e->getMessage()], 422);
-            }
-            return back()
-                ->with('error', 'Gagal memproses transaksi pajak: ' . $e->getMessage())
-                ->withInput();
-        }
+            ->with('success', 'Jenis pajak baru berhasil ditambahkan.');
     }
 }

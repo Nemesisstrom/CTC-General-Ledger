@@ -8,199 +8,181 @@ use App\Models\ChartOfAccount;
 use App\Models\Journal;
 use App\Models\JournalDetail;
 use App\Models\Payroll;
-use App\Traits\ChecksClosedPeriod;
+use App\Models\PayrollItem;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Exception;
+use Illuminate\Validation\ValidationException;
 
 class PayrollController extends Controller
 {
-    use ChecksClosedPeriod;
-
     public function index(Request $request)
     {
-        $payrolls = Payroll::with(['creator'])
-            ->orderBy('payment_date', 'desc')
-            ->orderBy('id', 'desc')
+        $period = $request->input('period', now()->format('Y-m'));
+
+        $payrolls = Payroll::with(['user', 'creator', 'journal'])
+            ->latest('payment_date')
+            ->latest('id')
             ->paginate(15);
 
-        if ($request->wantsJson()) {
-            return response()->json($payrolls);
-        }
+        $employees = User::where('is_active', true)
+            ->orderBy('name')
+            ->get();
 
-        $expenseAccounts = ChartOfAccount::where('type', 'expense')
-            ->where('is_active', true)
+        $cashAccounts = ChartOfAccount::where('is_active', true)
+            ->where('type', 'asset')
             ->whereNotNull('parent_id')
             ->orderBy('code')
             ->get();
 
-        $paymentAccounts = ChartOfAccount::where('is_active', true)
+        $expenseAccounts = ChartOfAccount::where('is_active', true)
+            ->where('type', 'expense')
             ->whereNotNull('parent_id')
-            ->where('code', 'like', '1-11%')
             ->orderBy('code')
             ->get();
 
-        return view('admin.payroll.index', compact('payrolls', 'expenseAccounts', 'paymentAccounts'));
+        $liabilityAccounts = ChartOfAccount::where('is_active', true)
+            ->where('type', 'liability')
+            ->whereNotNull('parent_id')
+            ->orderBy('code')
+            ->get();
+
+        return view('admin.payroll.index', compact(
+            'period',
+            'payrolls',
+            'employees',
+            'cashAccounts',
+            'expenseAccounts',
+            'liabilityAccounts'
+        ));
     }
 
     public function store(StorePayrollRequest $request)
     {
-        $validated =$request->validated();
-        $paymentDate =$validated['payment_date'];
+        $validated = $request->validated();
 
-        if ($this->isPeriodClosed($paymentDate)) {$msg = $this->closedPeriodMessage($paymentDate);
-            if ($request->wantsJson()) {
-                return response()->json(['message' => $msg], 422);
-            }
-            return back()->with('error', $msg)->withInput();
+        $paymentDate = $validated['payment_date'] ?? now()->toDateString();
+        $year = date('Y', strtotime($paymentDate));
+
+        $isClosed = Journal::where('journal_number', 'LIKE', "JRN-CLS-{$year}%")
+            ->where('status', 'posted')
+            ->exists();
+
+        if ($isClosed) {
+            throw ValidationException::withMessages([
+                'payment_date' => ["Tahun buku {$year} sudah ditutup dan tidak dapat memproses penggajian baru."],
+            ]);
         }
 
-        DB::beginTransaction();
-        try {
-            $ymCode = date('Ym', strtotime($paymentDate));
-            $lastPayroll = Payroll::where('payroll_number', 'like', "PAY-{$ymCode}-%")
+        $payroll = DB::transaction(function () use ($validated, $request, $paymentDate) {
+            $employee = User::findOrFail($validated['user_id']);
+
+            $baseSalary = (float) ($validated['base_salary'] ?? $employee->base_salary ?? 0);
+            $allowances = (float) ($validated['allowances'] ?? 0);
+            $deductions = (float) ($validated['deductions'] ?? 0);
+            $pphAmount  = (float) ($validated['pph21_amount'] ?? $validated['tax_deduction'] ?? 0);
+
+            $grossSalary = $baseSalary + $allowances;
+            $netSalary   = max(0, $grossSalary - $deductions - $pphAmount);
+
+            $expenseAccountId = $validated['expense_account_id']
+                ?? ChartOfAccount::where('type', 'expense')->whereNotNull('parent_id')->value('id');
+            $cashAccountId = $validated['cash_account_id']
+                ?? ChartOfAccount::where('type', 'asset')->whereNotNull('parent_id')->value('id');
+            $pphAccountId = $validated['pph_account_id']
+                ?? ChartOfAccount::where('type', 'liability')->whereNotNull('parent_id')->value('id');
+
+            $dateStr = date('Ymd', strtotime($paymentDate));
+            $prefix = "PAY-{$dateStr}-";
+            $lastJournal = Journal::where('journal_number', 'LIKE', "{$prefix}%")
                 ->lockForUpdate()
-                ->orderByDesc('payroll_number')
+                ->latest('id')
                 ->first();
 
-            $lastSeq = 0;
-            if ($lastPayroll) {
-                $parts = explode('-',$lastPayroll->payroll_number);
-                $lastSeq = (int) end($parts);
-            }
+            $sequence = $lastJournal
+                ? ((int) substr($lastJournal->journal_number, -4)) + 1
+                : 1;
 
-            $payrollNumber = 'PAY-' . $ymCode . '-' . sprintf('\%04d', $lastSeq + 1);
+            $journalNumber = $prefix . str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+            $period = $validated['period'] ?? date('Y-m', strtotime($paymentDate));
+            $description = $validated['notes'] ?? "Pembayaran Gaji {$employee->name} ({$period})";
 
-            $baseSalary = round((float) ($validated['base_salary'] ?? 0), 2);
-            $allowances = round((float) ($validated['allowances'] ?? 0), 2);
-            $deductions = round((float) ($validated['deductions'] ?? 0), 2);
-            $netSalary  = round(($baseSalary + $allowances) -$deductions, 2);
+            $journal = Journal::create([
+                'journal_number'   => $journalNumber,
+                'journal_date'     => $paymentDate,
+                'reference_number' => $journalNumber,
+                'description'      => $description,
+                'status'           => 'posted',
+                'created_by'       => $request->user()->id,
+            ]);
 
-            if ($netSalary <= 0) {
-                throw new Exception('Total gaji bersih (Net Salary) harus lebih besar dari Rp 0.');
+            if ($expenseAccountId && $cashAccountId && ($netSalary + $pphAmount) > 0) {
+                JournalDetail::create([
+                    'journal_id'  => $journal->id,
+                    'account_id'  => $expenseAccountId,
+                    'debit'       => $netSalary + $pphAmount,
+                    'credit'      => 0,
+                    'description' => $description,
+                ]);
+
+                if ($netSalary > 0) {
+                    JournalDetail::create([
+                        'journal_id'  => $journal->id,
+                        'account_id'  => $cashAccountId,
+                        'debit'       => 0,
+                        'credit'      => $netSalary,
+                        'description' => $description,
+                    ]);
+                }
+
+                if ($pphAmount > 0 && $pphAccountId) {
+                    JournalDetail::create([
+                        'journal_id'  => $journal->id,
+                        'account_id'  => $pphAccountId,
+                        'debit'       => 0,
+                        'credit'      => $pphAmount,
+                        'description' => "Potongan PPh 21 - {$employee->name} ({$period})",
+                    ]);
+                }
             }
 
             $payroll = Payroll::create([
-                'payroll_number' => $payrollNumber,
-                'period'         => $validated['period'] ?? date('Y-m', strtotime($paymentDate)),
-                'payment_date'   => $paymentDate,
-                'employee_name'  => $validated['employee_name'] ?? 'Karyawan',
-                'base_salary'    => $baseSalary,
-                'allowances'     => $allowances,
-                'deductions'     => $deductions,
-                'net_salary'     => $netSalary,
-                'notes'          => $validated['notes'] ?? null,
-                'status'         => 'paid',
-                'created_by'     => auth()->id(),
+                'user_id'      => $employee->id,
+                'journal_id'   => $journal->id,
+                'period'       => $period,
+                'payment_date' => $paymentDate,
+                'base_salary'  => $baseSalary,
+                'allowances'   => $allowances,
+                'deductions'   => $deductions + $pphAmount,
+                'net_salary'   => $netSalary,
+                'status'       => 'paid',
+                'notes'        => $validated['notes'] ?? null,
+                'created_by'   => $request->user()->id,
             ]);
 
-            $expenseAccount = !empty($validated['expense_account_id'])
-                ? ChartOfAccount::findOrFail($validated['expense_account_id'])
-                : ChartOfAccount::where('type', 'expense')->whereNotNull('parent_id')->orderBy('code')->firstOrFail();
-
-            $paymentAccount = !empty($validated['payment_account_id'])
-                ? ChartOfAccount::findOrFail($validated['payment_account_id'])
-                : ChartOfAccount::where('code', 'like', '1-11%')->whereNotNull('parent_id')->orderBy('code')->firstOrFail();
-
-            $journal = Journal::create([
-                'journal_number'   => 'JRN-' . $payrollNumber,
-                'journal_date'     => $paymentDate,
-                'reference_number' => $payrollNumber,
-                'description'      => "[Penggajian] Pembayaran gaji {$payroll->employee_name} ({$payroll->period})",
-                'status'           => 'posted',
-                'created_by'       => auth()->id(),
-            ]);
-
-            JournalDetail::create([
-                'journal_id' => $journal->id,
-                'account_id' => $expenseAccount->id,
-                'debit'      => $netSalary,
-                'credit'     => 0,
-                'memo'       => "Beban Gaji - {$payroll->employee_name}",
-            ]);
-
-            JournalDetail::create([
-                'journal_id' => $journal->id,
-                'account_id' => $paymentAccount->id,
-                'debit'      => 0,
-                'credit'     => $netSalary,
-                'memo'       => "Pembayaran Gaji via {$paymentAccount->name}",
-            ]);
-
-            DB::commit();
-
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'message' => "Data penggajian {$payrollNumber} berhasil disimpan.",
-                    'data'    => $payroll,
-                ], 201);
-            }
-
-            return redirect()
-                ->route('admin.payrolls.index')
-                ->with('success', "Data penggajian {$payrollNumber} berhasil disimpan dan diposting ke jurnal.");
-
-        } catch (Exception $e) {
-            DB::rollBack();
-            if ($request->wantsJson()) {
-                return response()->json(['message' => 'Gagal memproses penggajian: ' . $e->getMessage()], 422);
-            }
-            return back()
-                ->with('error', 'Gagal memproses penggajian: ' . $e->getMessage())
-                ->withInput();
-        }
-    }
-
-    public function destroy(Request $request,$id)
-    {
-        if (!auth()->user()->hasRole('admin')) {
-            abort(403, 'Hanya Administrator yang memiliki otoritas menghapus data penggajian.');
-        }
-
-        DB::beginTransaction();
-        try {
-            $payroll = Payroll::findOrFail($id);
-
-            if ($this->isPeriodClosed($payroll->payment_date)) {$msg = $this->closedPeriodMessage($payroll->payment_date);
-                if ($request->wantsJson()) {
-                    return response()->json(['message' => $msg], 422);
+            if (class_exists(PayrollItem::class) && ! empty($validated['items'])) {
+                foreach ($validated['items'] as $item) {
+                    PayrollItem::create([
+                        'payroll_id' => $payroll->id,
+                        'name'       => $item['name'],
+                        'type'       => $item['type'],
+                        'amount'     => $item['amount'],
+                    ]);
                 }
-                return back()->with('error', $msg);
             }
 
-            Log::warning('HARD DELETE DATA PENGGAJIAN', [
-                'payroll_number' => $payroll->payroll_number,
-                'payment_date'   => $payroll->payment_date,
-                'net_salary'     => $payroll->net_salary,
-                'deleted_by_id'  => auth()->id(),
-            ]);
+            return $payroll;
+        });
 
-            $journal = Journal::where('reference_number',$payroll->payroll_number)
-                ->orWhere('journal_number', 'JRN-' . $payroll->payroll_number)
-                ->first();
-
-            if ($journal) {
-                JournalDetail::where('journal_id', $journal->id)->delete();$journal->delete();
-            }
-
-            $payroll->delete();
-
-            DB::commit();
-
-            if ($request->wantsJson()) {
-                return response()->json(['message' => 'Data penggajian berhasil dihapus.']);
-            }
-
-            return redirect()
-                ->route('admin.payrolls.index')
-                ->with('success', 'Data penggajian beserta jurnal terkait berhasil dihapus.');
-        } catch (Exception $e) {
-            DB::rollBack();
-            if ($request->wantsJson()) {
-                return response()->json(['message' => 'Gagal menghapus data penggajian: ' . $e->getMessage()], 422);
-            }
-            return back()->with('error', 'Gagal menghapus data penggajian: ' . $e->getMessage());
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Penggajian berhasil diproses dan dijurnal.',
+                'data'    => $payroll->load(['user', 'journal']),
+            ], 201);
         }
+
+        return redirect()
+            ->route('admin.payrolls.index')
+            ->with('success', 'Penggajian karyawan berhasil diproses dan dijurnal.');
     }
 }

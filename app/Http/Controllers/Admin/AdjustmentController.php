@@ -7,11 +7,11 @@ use App\Http\Requests\StoreAdjustmentRequest;
 use App\Models\ChartOfAccount;
 use App\Models\Journal;
 use App\Models\JournalDetail;
+use App\Models\RecurringExpense;
 use App\Traits\ChecksClosedPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Exception;
+use Illuminate\Validation\ValidationException;
 
 class AdjustmentController extends Controller
 {
@@ -20,148 +20,160 @@ class AdjustmentController extends Controller
     public function index(Request $request)
     {
         $adjustments = Journal::with(['details.account', 'creator'])
-            ->where(function ($q) {
-                $q->where('journal_number', 'LIKE', 'ADJ-%')
-                  ->orWhere('journal_number', 'LIKE', 'JRN-ADJ-%');
+            ->where(function ($query) {
+                $query->where('journal_number', 'LIKE', 'ADJ-%')
+                      ->orWhere('journal_number', 'LIKE', 'JRN-ADJ-%');
             })
-            ->orderBy('journal_date', 'desc')
-            ->orderBy('id', 'desc')
+            ->latest('journal_date')
+            ->latest('id')
             ->paginate(15);
-
-        if ($request->wantsJson()) {
-            return response()->json($adjustments);
-        }
 
         $accounts = ChartOfAccount::where('is_active', true)
             ->whereNotNull('parent_id')
             ->orderBy('code')
             ->get();
 
-        return view('admin.adjustments.index', compact('adjustments', 'accounts'));
+        $expenseAccounts = $accounts->where('type', 'expense')->values();
+        $accumulatedAccounts = $accounts->whereIn('type', ['asset', 'liability', 'revenue'])->values();
+        $assetAccounts = $accounts->where('type', 'asset')->values();
+        $liabilityAccounts = $accounts->where('type', 'liability')->values();
+        $revenueAccounts = $accounts->where('type', 'revenue')->values();
+
+        $recurringExpenses = RecurringExpense::with(['debitAccount', 'creditAccount'])
+            ->latest()
+            ->get();
+
+        return view('admin.adjustments.index', compact(
+            'adjustments',
+            'accounts',
+            'expenseAccounts',
+            'accumulatedAccounts',
+            'assetAccounts',
+            'liabilityAccounts',
+            'revenueAccounts',
+            'recurringExpenses'
+        ));
     }
 
     public function store(StoreAdjustmentRequest $request)
     {
         $validated = $request->validated();
-        $adjDate = $validated['adjustment_date'];
 
-        if ($this->isPeriodClosed($adjDate)) {
-            $msg = $this->closedPeriodMessage($adjDate);
-            if ($request->wantsJson()) {
-                return response()->json(['message' => $msg], 422);
-            }
-            return back()->with('error', $msg)->withInput();
+        $year = date('Y', strtotime($validated['adjustment_date']));
+        $isClosed = Journal::where('journal_number', 'LIKE', "JRN-CLS-{$year}%")
+            ->where('status', 'posted')
+            ->exists();
+
+        if ($isClosed) {
+            throw ValidationException::withMessages([
+                'adjustment_date' => ["Tahun buku {$year} sudah ditutup dan tidak dapat menerima jurnal penyesuaian baru."],
+            ]);
         }
 
-        DB::beginTransaction();
-        try {
-            $ymCode = date('Ym', strtotime($adjDate));
-            $lastAdj = Journal::where('journal_number', 'like', "ADJ-{$ymCode}-%")
+        $journal = DB::transaction(function () use ($validated, $request) {
+            $dateStr = date('Ymd', strtotime($validated['adjustment_date']));
+            $prefix = "ADJ-{$dateStr}-";
+            $lastJournal = Journal::where('journal_number', 'LIKE', "{$prefix}%")
                 ->lockForUpdate()
-                ->orderByDesc('journal_number')
+                ->latest('id')
                 ->first();
 
-            $lastSeq = 0;
-            if ($lastAdj) {
-                $parts = explode('-', $lastAdj->journal_number);
-                $lastSeq = (int) end($parts);
-            }
+            $sequence = $lastJournal
+                ? ((int) substr($lastJournal->journal_number, -4)) + 1
+                : 1;
 
-            $adjNumber = 'ADJ-' . $ymCode . '-' . sprintf('%04d', $lastSeq + 1);
-            $amount = round((float) $validated['amount'], 2);
+            $journalNumber = $prefix . str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
 
             $journal = Journal::create([
-                'journal_number'   => $adjNumber,
-                'journal_date'     => $adjDate,
-                'reference_number' => $validated['reference_number'] ?? $adjNumber,
-                'description'      => "[Penyesuaian] " . $validated['description'],
+                'journal_number'   => $journalNumber,
+                'journal_date'     => $validated['adjustment_date'],
+                'reference_number' => $validated['reference_number'] ?? $journalNumber,
+                'description'      => $validated['description'],
                 'status'           => 'posted',
-                'created_by'       => auth()->id(),
+                'created_by'       => $request->user()->id,
+            ]);
+
+            $amount = (float) $validated['amount'];
+
+            JournalDetail::create([
+                'journal_id'  => $journal->id,
+                'account_id'  => $validated['expense_account_id'],
+                'debit'       => $amount,
+                'credit'      => 0,
+                'description' => $validated['description'],
             ]);
 
             JournalDetail::create([
-                'journal_id' => $journal->id,
-                'account_id' => $validated['debit_account_id'],
-                'debit'      => $amount,
-                'credit'     => 0,
-                'memo'       => $validated['description'],
+                'journal_id'  => $journal->id,
+                'account_id'  => $validated['accumulated_account_id'],
+                'debit'       => 0,
+                'credit'      => $amount,
+                'description' => $validated['description'],
             ]);
 
-            JournalDetail::create([
-                'journal_id' => $journal->id,
-                'account_id' => $validated['credit_account_id'],
-                'debit'      => 0,
-                'credit'     => $amount,
-                'memo'       => $validated['description'],
-            ]);
+            return $journal;
+        });
 
-            DB::commit();
-
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'message' => "Jurnal penyesuaian {$adjNumber} berhasil diposting.",
-                    'data'    => $journal->load('details.account'),
-                ], 201);
-            }
-
-            return redirect()
-                ->route('admin.adjustments.index')
-                ->with('success', "Jurnal penyesuaian {$adjNumber} berhasil diposting ke Buku Besar.");
-
-        } catch (Exception $e) {
-            DB::rollBack();
-            if ($request->wantsJson()) {
-                return response()->json(['message' => 'Gagal menyimpan jurnal penyesuaian: ' . $e->getMessage()], 422);
-            }
-            return back()
-                ->with('error', 'Gagal menyimpan jurnal penyesuaian: ' . $e->getMessage())
-                ->withInput();
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Jurnal penyesuaian berhasil diposting.',
+                'data'    => $journal->load('details.account'),
+            ], 201);
         }
+
+        return redirect()
+            ->route('admin.adjustments.index')
+            ->with('success', 'Jurnal penyesuaian berhasil diposting.');
     }
 
-    public function destroy(Request $request, $id)
+    public function storeRecurring(Request $request)
     {
-        if (!auth()->user()->hasRole('admin')) {
-            abort(403, 'Hanya Administrator yang memiliki otoritas menghapus jurnal penyesuaian.');
+        $validated = $request->validate([
+            'name'              => ['required', 'string', 'max:255'],
+            'debit_account_id'  => ['required', 'exists:chart_of_accounts,id', 'different:credit_account_id'],
+            'credit_account_id' => ['required', 'exists:chart_of_accounts,id'],
+            'amount'            => ['required', 'numeric', 'min:1'],
+            'frequency'         => ['required', 'in:daily,weekly,monthly,yearly'],
+            'next_run_date'     => ['required', 'date'],
+            'description'       => ['nullable', 'string', 'max:500'],
+        ]);
+
+        RecurringExpense::create([
+            'name'              => $validated['name'],
+            'debit_account_id'  => $validated['debit_account_id'],
+            'credit_account_id' => $validated['credit_account_id'],
+            'amount'            => $validated['amount'],
+            'frequency'         => $validated['frequency'],
+            'next_run_date'     => $validated['next_run_date'],
+            'description'       => $validated['description'] ?? $validated['name'],
+            'is_active'         => true,
+            'created_by'        => $request->user()->id,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Jadwal beban berulang berhasil ditambahkan.'], 201);
         }
 
-        DB::beginTransaction();
-        try {
-            $journal = Journal::findOrFail($id);
+        return redirect()
+            ->route('admin.adjustments.index')
+            ->with('success', 'Jadwal beban berulang berhasil ditambahkan.');
+    }
 
-            if ($this->isPeriodClosed($journal->journal_date)) {
-                $msg = $this->closedPeriodMessage($journal->journal_date);
-                if ($request->wantsJson()) {
-                    return response()->json(['message' => $msg], 422);
-                }
-                return back()->with('error', $msg);
-            }
+    public function toggleRecurring(Request $request, RecurringExpense $recurringExpense)
+    {
+        $recurringExpense->update([
+            'is_active' => ! $recurringExpense->is_active,
+        ]);
 
-            Log::warning('HARD DELETE JURNAL PENYESUAIAN', [
-                'journal_number' => $journal->journal_number,
-                'journal_date'   => $journal->journal_date,
-                'deleted_by_id'  => auth()->id(),
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Status jadwal beban berulang diperbarui.',
+                'data'    => $recurringExpense,
             ]);
-
-            JournalDetail::where('journal_id', $journal->id)->delete();
-            $journal->delete();
-
-            DB::commit();
-
-            if ($request->wantsJson()) {
-                return response()->json(['message' => 'Jurnal penyesuaian berhasil dihapus.']);
-            }
-
-            return redirect()
-                ->route('admin.adjustments.index')
-                ->with('success', 'Jurnal penyesuaian berhasil dihapus.');
-
-        } catch (Exception $e) {
-            DB::rollBack();
-            if ($request->wantsJson()) {
-                return response()->json(['message' => 'Gagal menghapus jurnal penyesuaian: ' . $e->getMessage()], 422);
-            }
-            return back()->with('error', 'Gagal menghapus jurnal penyesuaian: ' . $e->getMessage());
         }
+
+        return redirect()
+            ->route('admin.adjustments.index')
+            ->with('success', 'Status jadwal beban berulang berhasil diperbarui.');
     }
 }
