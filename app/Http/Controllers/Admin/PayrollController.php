@@ -25,6 +25,10 @@ class PayrollController extends Controller
             ->orderBy('id', 'desc')
             ->paginate(15);
 
+        if ($request->wantsJson()) {
+            return response()->json($payrolls);
+        }
+
         $expenseAccounts = ChartOfAccount::where('type', 'expense')
             ->where('is_active', true)
             ->whereNotNull('parent_id')
@@ -45,11 +49,12 @@ class PayrollController extends Controller
         $validated = $request->validated();
         $paymentDate = $validated['payment_date'];
 
-        // Kunci periode jika tahun sudah ditutup buku
         if ($this->isPeriodClosed($paymentDate)) {
-            return back()
-                ->with('error', $this->closedPeriodMessage($paymentDate))
-                ->withInput();
+            $msg = $this->closedPeriodMessage($paymentDate);
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $msg], 422);
+            }
+            return back()->with('error', $msg)->withInput();
         }
 
         DB::beginTransaction();
@@ -91,7 +96,6 @@ class PayrollController extends Controller
                 'created_by'     => auth()->id(),
             ]);
 
-            // Tentukan akun beban gaji & akun kas/bank
             $expenseAccount = !empty($validated['expense_account_id'])
                 ? ChartOfAccount::findOrFail($validated['expense_account_id'])
                 : ChartOfAccount::where('type', 'expense')->whereNotNull('parent_id')->orderBy('code')->firstOrFail();
@@ -100,7 +104,6 @@ class PayrollController extends Controller
                 ? ChartOfAccount::findOrFail($validated['payment_account_id'])
                 : ChartOfAccount::where('code', 'like', '1-11%')->whereNotNull('parent_id')->orderBy('code')->firstOrFail();
 
-            // Auto-posting ke Jurnal Umum
             $journal = Journal::create([
                 'journal_number'   => 'JRN-' . $payrollNumber,
                 'journal_date'     => $paymentDate,
@@ -128,19 +131,29 @@ class PayrollController extends Controller
 
             DB::commit();
 
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'message' => "Data penggajian {$payrollNumber} berhasil disimpan.",
+                    'data'    => $payroll,
+                ], 201);
+            }
+
             return redirect()
                 ->route('admin.payrolls.index')
                 ->with('success', "Data penggajian {$payrollNumber} berhasil disimpan dan diposting ke jurnal.");
 
         } catch (Exception $e) {
             DB::rollBack();
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Gagal memproses penggajian: ' . $e->getMessage()], 422);
+            }
             return back()
                 ->with('error', 'Gagal memproses penggajian: ' . $e->getMessage())
                 ->withInput();
         }
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         if (!auth()->user()->hasRole('admin')) {
             abort(403, 'Hanya Administrator yang memiliki otoritas menghapus data penggajian.');
@@ -151,7 +164,11 @@ class PayrollController extends Controller
             $payroll = Payroll::findOrFail($id);
 
             if ($this->isPeriodClosed($payroll->payment_date)) {
-                return back()->with('error', $this->closedPeriodMessage($payroll->payment_date));
+                $msg = $this->closedPeriodMessage($payroll->payment_date);
+                if ($request->wantsJson()) {
+                    return response()->json(['message' => $msg], 422);
+                }
+                return back()->with('error', $msg);
             }
 
             Log::warning('HARD DELETE DATA PENGGAJIAN', [
@@ -174,11 +191,18 @@ class PayrollController extends Controller
 
             DB::commit();
 
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Data penggajian berhasil dihapus.']);
+            }
+
             return redirect()
                 ->route('admin.payrolls.index')
                 ->with('success', 'Data penggajian beserta jurnal terkait berhasil dihapus.');
         } catch (Exception $e) {
             DB::rollBack();
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Gagal menghapus data penggajian: ' . $e->getMessage()], 422);
+            }
             return back()->with('error', 'Gagal menghapus data penggajian: ' . $e->getMessage());
         }
     }

@@ -22,11 +22,20 @@ class TaxController extends Controller
         $taxes = Tax::orderBy('name')->get();
 
         $taxJournals = Journal::with(['details.account', 'creator'])
-            ->where('journal_number', 'LIKE', 'TAX-%')
-            ->orWhere('journal_number', 'LIKE', 'JRN-TAX-%')
+            ->where(function ($q) {
+                $q->where('journal_number', 'LIKE', 'TAX-%')
+                  ->orWhere('journal_number', 'LIKE', 'JRN-TAX-%');
+            })
             ->orderBy('journal_date', 'desc')
             ->orderBy('id', 'desc')
             ->paginate(15);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'taxes'        => $taxes,
+                'tax_journals' => $taxJournals,
+            ]);
+        }
 
         $accounts = ChartOfAccount::where('is_active', true)
             ->whereNotNull('parent_id')
@@ -48,7 +57,7 @@ class TaxController extends Controller
             'is_active'   => 'boolean',
         ]);
 
-        Tax::create([
+        $tax = Tax::create([
             'name'        => $validated['name'],
             'code'        => strtoupper($validated['code']),
             'rate'        => round((float) $validated['rate'], 2),
@@ -57,6 +66,10 @@ class TaxController extends Controller
             'description' => $validated['description'] ?? null,
             'is_active'   => $request->boolean('is_active', true),
         ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Master tarif pajak berhasil ditambahkan.', 'data' => $tax], 201);
+        }
 
         return redirect()
             ->route('admin.taxes.index')
@@ -85,14 +98,22 @@ class TaxController extends Controller
             'is_active'   => $request->boolean('is_active', true),
         ]);
 
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Master tarif pajak berhasil diperbarui.', 'data' => $tax]);
+        }
+
         return redirect()
             ->route('admin.taxes.index')
             ->with('success', 'Master tarif pajak berhasil diperbarui.');
     }
 
-    public function destroy(Tax $tax)
+    public function destroy(Request $request, Tax $tax)
     {
         $tax->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Master tarif pajak berhasil dihapus.']);
+        }
 
         return redirect()
             ->route('admin.taxes.index')
@@ -104,11 +125,12 @@ class TaxController extends Controller
         $validated = $request->validated();
         $trxDate = $validated['transaction_date'];
 
-        // Kunci periode jika tahun pajak sudah ditutup buku
         if ($this->isPeriodClosed($trxDate)) {
-            return back()
-                ->with('error', $this->closedPeriodMessage($trxDate))
-                ->withInput();
+            $msg = $this->closedPeriodMessage($trxDate);
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $msg], 422);
+            }
+            return back()->with('error', $msg)->withInput();
         }
 
         DB::beginTransaction();
@@ -162,12 +184,22 @@ class TaxController extends Controller
 
             DB::commit();
 
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'message' => "Transaksi pajak {$taxRefNumber} berhasil diposting ke jurnal.",
+                    'data'    => $journal->load('details.account'),
+                ], 201);
+            }
+
             return redirect()
                 ->route('admin.taxes.index')
                 ->with('success', "Transaksi pajak {$taxRefNumber} sebesar Rp " . number_format($taxAmount, 0, ',', '.') . " berhasil diposting ke jurnal.");
 
         } catch (Exception $e) {
             DB::rollBack();
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Gagal memproses transaksi pajak: ' . $e->getMessage()], 422);
+            }
             return back()
                 ->with('error', 'Gagal memproses transaksi pajak: ' . $e->getMessage())
                 ->withInput();

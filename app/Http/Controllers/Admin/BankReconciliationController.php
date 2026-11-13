@@ -23,6 +23,10 @@ class BankReconciliationController extends Controller
             ->orderBy('id', 'desc')
             ->paginate(15);
 
+        if ($request->wantsJson()) {
+            return response()->json($reconciliations);
+        }
+
         $bankAccounts = ChartOfAccount::where('is_active', true)
             ->whereNotNull('parent_id')
             ->where('code', 'like', '1-11%')
@@ -37,27 +41,28 @@ class BankReconciliationController extends Controller
         $validated = $request->validated();
         $statementDate = $validated['statement_date'];
 
-        // Kunci periode jika tahun rekonsiliasi sudah ditutup buku
         if ($this->isPeriodClosed($statementDate)) {
-            return back()
-                ->with('error', $this->closedPeriodMessage($statementDate))
-                ->withInput();
+            $msg = $this->closedPeriodMessage($statementDate);
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $msg], 422);
+            }
+            return back()->with('error', $msg)->withInput();
         }
 
-        // Cegah duplikasi rekonsiliasi untuk akun bank dan tanggal rekening koran yang sama
         $alreadyExists = BankReconciliation::where('account_id', $validated['account_id'])
             ->whereDate('statement_date', $statementDate)
             ->exists();
 
         if ($alreadyExists) {
-            return back()
-                ->with('error', 'Akun kas/bank tersebut sudah memiliki data rekonsiliasi pada tanggal rekening koran yang sama.')
-                ->withInput();
+            $msg = 'Akun kas/bank tersebut sudah memiliki data rekonsiliasi pada tanggal rekening koran yang sama.';
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $msg], 422);
+            }
+            return back()->with('error', $msg)->withInput();
         }
 
         DB::beginTransaction();
         try {
-            // Hitung saldo buku (Book Balance) langsung via SQL SUM hanya dari jurnal berstatus 'posted'
             $bookTotals = JournalDetail::join('journals', 'journal_details.journal_id', '=', 'journals.id')
                 ->where('journal_details.account_id', $validated['account_id'])
                 ->where('journals.status', 'posted')
@@ -68,10 +73,9 @@ class BankReconciliationController extends Controller
             $bookBalance = round((float) $bookTotals->total_debit - (float) $bookTotals->total_credit, 2);
             $statementBalance = round((float) $validated['statement_balance'], 2);
             $difference = round($statementBalance - $bookBalance, 2);
-
             $status = abs($difference) < 0.01 ? 'reconciled' : 'unreconciled';
 
-            BankReconciliation::create([
+            $reconciliation = BankReconciliation::create([
                 'account_id'        => $validated['account_id'],
                 'statement_date'    => $statementDate,
                 'statement_balance' => $statementBalance,
@@ -84,12 +88,22 @@ class BankReconciliationController extends Controller
 
             DB::commit();
 
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'message' => 'Data rekonsiliasi bank berhasil disimpan.',
+                    'data'    => $reconciliation->load('account'),
+                ], 201);
+            }
+
             return redirect()
                 ->route('admin.bank-reconciliations.index')
                 ->with('success', 'Data rekonsiliasi bank berhasil disimpan.');
 
         } catch (Exception $e) {
             DB::rollBack();
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Gagal memproses rekonsiliasi bank: ' . $e->getMessage()], 422);
+            }
             return back()
                 ->with('error', 'Gagal memproses rekonsiliasi bank: ' . $e->getMessage())
                 ->withInput();
@@ -101,7 +115,11 @@ class BankReconciliationController extends Controller
         $reconciliation = BankReconciliation::findOrFail($id);
 
         if ($this->isPeriodClosed($reconciliation->statement_date)) {
-            return back()->with('error', $this->closedPeriodMessage($reconciliation->statement_date));
+            $msg = $this->closedPeriodMessage($reconciliation->statement_date);
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $msg], 422);
+            }
+            return back()->with('error', $msg);
         }
 
         $validated = $request->validate([
@@ -110,7 +128,6 @@ class BankReconciliationController extends Controller
             'status'            => 'nullable|in:reconciled,unreconciled',
         ]);
 
-        // Hitung ulang book balance terkini sampai tanggal statement
         $bookTotals = JournalDetail::join('journals', 'journal_details.journal_id', '=', 'journals.id')
             ->where('journal_details.account_id', $reconciliation->account_id)
             ->where('journals.status', 'posted')
@@ -131,12 +148,19 @@ class BankReconciliationController extends Controller
             'notes'             => $validated['notes'] ?? $reconciliation->notes,
         ]);
 
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Rekonsiliasi bank berhasil diperbarui.',
+                'data'    => $reconciliation->fresh('account'),
+            ]);
+        }
+
         return redirect()
             ->route('admin.bank-reconciliations.index')
             ->with('success', 'Rekonsiliasi bank berhasil diperbarui dan disesuaikan dengan saldo buku terkini.');
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         if (!auth()->user()->hasRole('admin')) {
             abort(403, 'Hanya Administrator yang memiliki otoritas menghapus data rekonsiliasi bank.');
@@ -145,10 +169,18 @@ class BankReconciliationController extends Controller
         $reconciliation = BankReconciliation::findOrFail($id);
 
         if ($this->isPeriodClosed($reconciliation->statement_date)) {
-            return back()->with('error', $this->closedPeriodMessage($reconciliation->statement_date));
+            $msg = $this->closedPeriodMessage($reconciliation->statement_date);
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $msg], 422);
+            }
+            return back()->with('error', $msg);
         }
 
         $reconciliation->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Data rekonsiliasi bank berhasil dihapus.']);
+        }
 
         return redirect()
             ->route('admin.bank-reconciliations.index')
