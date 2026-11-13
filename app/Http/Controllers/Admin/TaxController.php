@@ -22,8 +22,7 @@ class TaxController extends Controller
         $taxes = Tax::orderBy('name')->get();
 
         $taxJournals = Journal::with(['details.account', 'creator'])
-            ->where(function ($q) {
-                $q->where('journal_number', 'LIKE', 'TAX-%')
+            ->where(function ($q) {$q->where('journal_number', 'LIKE', 'TAX-%')
                   ->orWhere('journal_number', 'LIKE', 'JRN-TAX-%');
             })
             ->orderBy('journal_date', 'desc')
@@ -47,7 +46,7 @@ class TaxController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validated =$request->validate([
             'name'        => 'required|string|max:100',
             'code'        => 'required|string|max:30|unique:taxes,code',
             'rate'        => 'required|numeric|min:0|max:100',
@@ -60,8 +59,7 @@ class TaxController extends Controller
         $tax = Tax::create([
             'name'        => $validated['name'],
             'code'        => strtoupper($validated['code']),
-            'rate'        => round((float) $validated['rate'], 2),
-            'type'        => $validated['type'],
+            'rate'        => round((float) $validated['rate'], 2), 'type'        =>$validated['type'],
             'account_id'  => $validated['account_id'] ?? null,
             'description' => $validated['description'] ?? null,
             'is_active'   => $request->boolean('is_active', true),
@@ -76,9 +74,9 @@ class TaxController extends Controller
             ->with('success', 'Master tarif pajak berhasil ditambahkan.');
     }
 
-    public function update(Request $request, Tax $tax)
+    public function update(Request $request, Tax$tax)
     {
-        $validated = $request->validate([
+        $validated =$request->validate([
             'name'        => 'required|string|max:100',
             'code'        => 'required|string|max:30|unique:taxes,code,' . $tax->id,
             'rate'        => 'required|numeric|min:0|max:100',
@@ -91,8 +89,7 @@ class TaxController extends Controller
         $tax->update([
             'name'        => $validated['name'],
             'code'        => strtoupper($validated['code']),
-            'rate'        => round((float) $validated['rate'], 2),
-            'type'        => $validated['type'],
+            'rate'        => round((float) $validated['rate'], 2), 'type'        =>$validated['type'],
             'account_id'  => $validated['account_id'] ?? null,
             'description' => $validated['description'] ?? null,
             'is_active'   => $request->boolean('is_active', true),
@@ -107,7 +104,7 @@ class TaxController extends Controller
             ->with('success', 'Master tarif pajak berhasil diperbarui.');
     }
 
-    public function destroy(Request $request, Tax $tax)
+    public function destroy(Request $request, Tax$tax)
     {
         $tax->delete();
 
@@ -122,11 +119,10 @@ class TaxController extends Controller
 
     public function processTaxTransaction(StoreTaxTransactionRequest $request)
     {
-        $validated = $request->validated();
-        $trxDate = $validated['transaction_date'];
+        $validated =$request->validated();
+        $trxDate =$validated['transaction_date'];
 
-        if ($this->isPeriodClosed($trxDate)) {
-            $msg = $this->closedPeriodMessage($trxDate);
+        if ($this->isPeriodClosed($trxDate)) {$msg = $this->closedPeriodMessage($trxDate);
             if ($request->wantsJson()) {
                 return response()->json(['message' => $msg], 422);
             }
@@ -135,9 +131,7 @@ class TaxController extends Controller
 
         DB::beginTransaction();
         try {
-            $tax = Tax::findOrFail($validated['tax_id']);
-            $baseAmount = round((float) $validated['base_amount'], 2);
-            $taxAmount  = round($baseAmount * ((float) $tax->rate / 100), 2);
+            $tax = Tax::findOrFail($validated['tax_id']);$baseAmount = round((float) $validated['base_amount'], 2);$taxAmount  = round($baseAmount * ((float)$tax->rate / 100), 2);
 
             if ($taxAmount <= 0) {
                 throw new Exception('Nominal pajak terhitung harus lebih besar dari Rp 0.');
@@ -151,17 +145,17 @@ class TaxController extends Controller
 
             $lastSeq = 0;
             if ($lastTaxJrn) {
-                $parts = explode('-', $lastTaxJrn->journal_number);
+                $parts = explode('-',$lastTaxJrn->journal_number);
                 $lastSeq = (int) end($parts);
             }
 
-            $taxRefNumber = 'TAX-' . $ymCode . '-' . sprintf('%04d', $lastSeq + 1);
+            $taxRefNumber = 'TAX-' . $ymCode . '-' . sprintf('\%04d', $lastSeq + 1);
 
             $journal = Journal::create([
                 'journal_number'   => 'JRN-' . $taxRefNumber,
                 'journal_date'     => $trxDate,
                 'reference_number' => $taxRefNumber,
-                'description'      => "[Pajak - {$tax->name} ({$tax->rate}%)] " . ($validated['description'] ?? 'Pencatatan Pajak'),
+                'description'      => "[Pajak - {$tax->name} ({$tax->rate}\%)] " . ($validated['description'] ?? 'Pencatatan Pajak'),
                 'status'           => 'posted',
                 'created_by'       => auth()->id(),
             ]);

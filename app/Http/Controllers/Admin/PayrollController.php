@@ -46,11 +46,10 @@ class PayrollController extends Controller
 
     public function store(StorePayrollRequest $request)
     {
-        $validated = $request->validated();
-        $paymentDate = $validated['payment_date'];
+        $validated =$request->validated();
+        $paymentDate =$validated['payment_date'];
 
-        if ($this->isPeriodClosed($paymentDate)) {
-            $msg = $this->closedPeriodMessage($paymentDate);
+        if ($this->isPeriodClosed($paymentDate)) {$msg = $this->closedPeriodMessage($paymentDate);
             if ($request->wantsJson()) {
                 return response()->json(['message' => $msg], 422);
             }
@@ -67,16 +66,16 @@ class PayrollController extends Controller
 
             $lastSeq = 0;
             if ($lastPayroll) {
-                $parts = explode('-', $lastPayroll->payroll_number);
+                $parts = explode('-',$lastPayroll->payroll_number);
                 $lastSeq = (int) end($parts);
             }
 
-            $payrollNumber = 'PAY-' . $ymCode . '-' . sprintf('%04d', $lastSeq + 1);
+            $payrollNumber = 'PAY-' . $ymCode . '-' . sprintf('\%04d', $lastSeq + 1);
 
             $baseSalary = round((float) ($validated['base_salary'] ?? 0), 2);
             $allowances = round((float) ($validated['allowances'] ?? 0), 2);
             $deductions = round((float) ($validated['deductions'] ?? 0), 2);
-            $netSalary  = round(($baseSalary + $allowances) - $deductions, 2);
+            $netSalary  = round(($baseSalary + $allowances) -$deductions, 2);
 
             if ($netSalary <= 0) {
                 throw new Exception('Total gaji bersih (Net Salary) harus lebih besar dari Rp 0.');
@@ -153,7 +152,7 @@ class PayrollController extends Controller
         }
     }
 
-    public function destroy(Request $request, $id)
+    public function destroy(Request $request,$id)
     {
         if (!auth()->user()->hasRole('admin')) {
             abort(403, 'Hanya Administrator yang memiliki otoritas menghapus data penggajian.');
@@ -163,8 +162,7 @@ class PayrollController extends Controller
         try {
             $payroll = Payroll::findOrFail($id);
 
-            if ($this->isPeriodClosed($payroll->payment_date)) {
-                $msg = $this->closedPeriodMessage($payroll->payment_date);
+            if ($this->isPeriodClosed($payroll->payment_date)) {$msg = $this->closedPeriodMessage($payroll->payment_date);
                 if ($request->wantsJson()) {
                     return response()->json(['message' => $msg], 422);
                 }
@@ -178,13 +176,12 @@ class PayrollController extends Controller
                 'deleted_by_id'  => auth()->id(),
             ]);
 
-            $journal = Journal::where('reference_number', $payroll->payroll_number)
+            $journal = Journal::where('reference_number',$payroll->payroll_number)
                 ->orWhere('journal_number', 'JRN-' . $payroll->payroll_number)
                 ->first();
 
             if ($journal) {
-                JournalDetail::where('journal_id', $journal->id)->delete();
-                $journal->delete();
+                JournalDetail::where('journal_id', $journal->id)->delete();$journal->delete();
             }
 
             $payroll->delete();
