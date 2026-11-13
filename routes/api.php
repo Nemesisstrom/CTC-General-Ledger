@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\PayrollController;
 use App\Http\Controllers\Admin\JournalController;
 use App\Http\Controllers\Admin\BankReconciliationController;
 use App\Http\Controllers\Admin\AdjustmentController;
+use App\Http\Controllers\Admin\ClosingController;
 use App\Http\Controllers\Admin\TaxController;
 
 // Admin Report Controllers
@@ -27,14 +28,14 @@ use App\Http\Controllers\Admin\Reports\PayrollReportController;
 
 /*
 |--------------------------------------------------------------------------
-| API Routes
+| API Routes - v1
 |--------------------------------------------------------------------------
 */
 
 // ==========================================
-// Guest API Routes (v1)
+// Guest API Routes (v1) - Dilindungi Rate Limiter
 // ==========================================
-Route::prefix('v1')->name('api.v1.')->group(function () {
+Route::prefix('v1')->name('api.v1.')->middleware('throttle:10,1')->group(function () {
     Route::post('/register', [AuthController::class, 'registerApi'])->name('register');
     Route::post('/login', [AuthController::class, 'loginApi'])->name('login');
 
@@ -46,7 +47,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 // ==========================================
 // Authenticated API Routes (Sanctum v1)
 // ==========================================
-Route::middleware('auth:sanctum')->prefix('v1')->name('api.v1.')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:60,1'])->prefix('v1')->name('api.v1.')->group(function () {
 
     // Profile & Logout API
     Route::post('/logout', [AuthController::class, 'logoutApi'])->name('logout');
@@ -57,10 +58,19 @@ Route::middleware('auth:sanctum')->prefix('v1')->name('api.v1.')->group(function
         ->middleware('role:admin|akuntan|staff')
         ->name('dashboard');
 
-    // User Management & Chart Of Account API (Admin Only)
+    // Khusus Role Admin (Master Data, Tutup Buku, & Hard Delete)
     Route::middleware('role:admin')->group(function () {
-        Route::apiResource('users', UserController::class);
-        Route::apiResource('chart-of-accounts', ChartOfAccountController::class);
+        Route::apiResource('users', UserController::class)->except(['show']);
+        Route::apiResource('chart-of-accounts', ChartOfAccountController::class)->except(['show']);
+
+        // Tutup Buku Akhir Tahun via API
+        Route::post('/closing-year-end', [ClosingController::class, 'store'])->name('closing.year-end');
+
+        // Hard Delete Khusus Admin
+        Route::delete('/cash-transactions/{id}', [CashTransactionController::class, 'destroy'])->name('cash-transactions.destroy');
+        Route::delete('/bank-reconciliations/{id}', [BankReconciliationController::class, 'destroy'])->name('bank-reconciliations.destroy');
+        Route::delete('/payrolls/{id}', [PayrollController::class, 'destroy'])->name('payrolls.destroy');
+        Route::delete('/adjustments/{id}', [AdjustmentController::class, 'destroy'])->name('adjustments.destroy');
     });
 
     // Reports API Group
@@ -92,7 +102,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->name('api.v1.')->group(function
     });
 
     Route::middleware('permission:manage-bank-reconciliations')->group(function () {
-        Route::apiResource('bank-reconciliations', BankReconciliationController::class)->only(['index', 'store']);
+        Route::apiResource('bank-reconciliations', BankReconciliationController::class)->only(['index', 'store', 'update']);
     });
 
     // Payroll & Pajak API
@@ -117,6 +127,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->name('api.v1.')->group(function
 
     Route::middleware('permission:manage-adjustments')->group(function () {
         Route::apiResource('adjustments', AdjustmentController::class)->only(['index', 'store']);
+        Route::post('/adjustments/{id}/reverse', [AdjustmentController::class, 'reverse'])->name('adjustments.reverse');
     });
 
 });

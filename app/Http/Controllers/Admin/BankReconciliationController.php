@@ -7,97 +7,151 @@ use App\Http\Requests\StoreBankReconciliationRequest;
 use App\Models\BankReconciliation;
 use App\Models\ChartOfAccount;
 use App\Models\JournalDetail;
+use App\Traits\ChecksClosedPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
 class BankReconciliationController extends Controller
 {
+    use ChecksClosedPeriod;
+
     public function index(Request $request)
     {
-        // Mengambil seluruh catatan rekonsiliasi bank beserta relasi akun & reconciler
-        $reconciliations = BankReconciliation::with(['account', 'reconciler'])
+        $reconciliations = BankReconciliation::with(['account', 'creator'])
             ->orderBy('statement_date', 'desc')
             ->orderBy('id', 'desc')
             ->paginate(15);
 
-        // Hanya mengambil akun bertipe Asset (Kas/Bank) yang aktif
-        $bankAccounts = ChartOfAccount::where('type', 'asset')
-            ->where('is_active', true)
-            ->orderBy('code', 'asc')
+        $bankAccounts = ChartOfAccount::where('is_active', true)
+            ->whereNotNull('parent_id')
+            ->where('code', 'like', '1-11%')
+            ->orderBy('code')
             ->get();
-
-        if ($request->wantsJson()) {
-            return response()->json(['data' => $reconciliations]);
-        }
 
         return view('admin.bank_reconciliation.index', compact('reconciliations', 'bankAccounts'));
     }
 
     public function store(StoreBankReconciliationRequest $request)
     {
-        $accountId = $request->account_id;
-        $statementDate = $request->statement_date;
-        $statementBalance = $request->statement_balance;
+        $validated = $request->validated();
+        $statementDate = $validated['statement_date'];
+
+        // Kunci periode jika tahun rekonsiliasi sudah ditutup buku
+        if ($this->isPeriodClosed($statementDate)) {
+            return back()
+                ->with('error', $this->closedPeriodMessage($statementDate))
+                ->withInput();
+        }
+
+        // Cegah duplikasi rekonsiliasi untuk akun bank dan tanggal rekening koran yang sama
+        $alreadyExists = BankReconciliation::where('account_id', $validated['account_id'])
+            ->whereDate('statement_date', $statementDate)
+            ->exists();
+
+        if ($alreadyExists) {
+            return back()
+                ->with('error', 'Akun kas/bank tersebut sudah memiliki data rekonsiliasi pada tanggal rekening koran yang sama.')
+                ->withInput();
+        }
 
         DB::beginTransaction();
         try {
-            // 1. Hitung Total Debit & Kredit dalam 1 Query Aggregation
-            $totals = JournalDetail::where('account_id', $accountId)
-                ->whereHas('journal', function ($q) use ($statementDate) {
-                    $q->where('journal_date', '<=', $statementDate)
-                      ->where('status', 'posted');
-                })
-                ->selectRaw('SUM(debit) as total_debit, SUM(credit) as total_credit')
+            // Hitung saldo buku (Book Balance) langsung via SQL SUM hanya dari jurnal berstatus 'posted'
+            $bookTotals = JournalDetail::join('journals', 'journal_details.journal_id', '=', 'journals.id')
+                ->where('journal_details.account_id', $validated['account_id'])
+                ->where('journals.status', 'posted')
+                ->whereDate('journals.journal_date', '<=', $statementDate)
+                ->selectRaw('COALESCE(SUM(journal_details.debit), 0) as total_debit, COALESCE(SUM(journal_details.credit), 0) as total_credit')
                 ->first();
 
-            $debitSum = $totals->total_debit ?? 0;
-            $creditSum = $totals->total_credit ?? 0;
+            $bookBalance = round((float) $bookTotals->total_debit - (float) $bookTotals->total_credit, 2);
+            $statementBalance = round((float) $validated['statement_balance'], 2);
+            $difference = round($statementBalance - $bookBalance, 2);
 
-            // Saldo Normal Kas/Bank adalah Debit
-            $bookBalance = $debitSum - $creditSum;
-            $difference = $statementBalance - $bookBalance;
-            $status = (round($difference, 2) == 0) ? 'reconciled' : 'pending';
+            $status = abs($difference) < 0.01 ? 'reconciled' : 'unreconciled';
 
-            // 2. Simpan Rekord Rekonsiliasi Bank
-            $reconciliation = BankReconciliation::create([
-                'account_id'        => $accountId,
+            BankReconciliation::create([
+                'account_id'        => $validated['account_id'],
                 'statement_date'    => $statementDate,
                 'statement_balance' => $statementBalance,
                 'book_balance'      => $bookBalance,
                 'difference'        => $difference,
                 'status'            => $status,
-                'notes'             => $request->notes,
-                'reconciled_by'     => auth()->id(),
+                'notes'             => $validated['notes'] ?? null,
+                'created_by'        => auth()->id(),
             ]);
 
             DB::commit();
 
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'message' => 'Rekonsiliasi bank berhasil diproses',
-                    'data'    => $reconciliation
-                ], 201);
-            }
-
-            $message = ($status === 'reconciled')
-                ? 'Rekonsiliasi Berhasil! Saldo bank dan pembukuan cocok (MATCH).'
-                : 'Rekonsiliasi Disimpan. Terdapat selisih sebesar Rp ' . number_format(abs($difference), 0, ',', '.');
-
             return redirect()
                 ->route('admin.bank-reconciliations.index')
-                ->with('success', $message);
+                ->with('success', 'Data rekonsiliasi bank berhasil disimpan.');
 
         } catch (Exception $e) {
             DB::rollBack();
-
-            if ($request->wantsJson()) {
-                return response()->json(['error' => 'Gagal memproses rekonsiliasi: ' . $e->getMessage()], 500);
-            }
-
             return back()
-                ->withInput()
-                ->with('error', 'Gagal memproses rekonsiliasi: ' . $e->getMessage());
+                ->with('error', 'Gagal memproses rekonsiliasi bank: ' . $e->getMessage())
+                ->withInput();
         }
+    }
+
+    public function update(Request $request, $id)
+    {
+        $reconciliation = BankReconciliation::findOrFail($id);
+
+        if ($this->isPeriodClosed($reconciliation->statement_date)) {
+            return back()->with('error', $this->closedPeriodMessage($reconciliation->statement_date));
+        }
+
+        $validated = $request->validate([
+            'statement_balance' => 'required|numeric',
+            'notes'             => 'nullable|string|max:500',
+            'status'            => 'nullable|in:reconciled,unreconciled',
+        ]);
+
+        // Hitung ulang book balance terkini sampai tanggal statement
+        $bookTotals = JournalDetail::join('journals', 'journal_details.journal_id', '=', 'journals.id')
+            ->where('journal_details.account_id', $reconciliation->account_id)
+            ->where('journals.status', 'posted')
+            ->whereDate('journals.journal_date', '<=', $reconciliation->statement_date)
+            ->selectRaw('COALESCE(SUM(journal_details.debit), 0) as total_debit, COALESCE(SUM(journal_details.credit), 0) as total_credit')
+            ->first();
+
+        $bookBalance = round((float) $bookTotals->total_debit - (float) $bookTotals->total_credit, 2);
+        $statementBalance = round((float) $validated['statement_balance'], 2);
+        $difference = round($statementBalance - $bookBalance, 2);
+        $status = $validated['status'] ?? (abs($difference) < 0.01 ? 'reconciled' : 'unreconciled');
+
+        $reconciliation->update([
+            'statement_balance' => $statementBalance,
+            'book_balance'      => $bookBalance,
+            'difference'        => $difference,
+            'status'            => $status,
+            'notes'             => $validated['notes'] ?? $reconciliation->notes,
+        ]);
+
+        return redirect()
+            ->route('admin.bank-reconciliations.index')
+            ->with('success', 'Rekonsiliasi bank berhasil diperbarui dan disesuaikan dengan saldo buku terkini.');
+    }
+
+    public function destroy($id)
+    {
+        if (!auth()->user()->hasRole('admin')) {
+            abort(403, 'Hanya Administrator yang memiliki otoritas menghapus data rekonsiliasi bank.');
+        }
+
+        $reconciliation = BankReconciliation::findOrFail($id);
+
+        if ($this->isPeriodClosed($reconciliation->statement_date)) {
+            return back()->with('error', $this->closedPeriodMessage($reconciliation->statement_date));
+        }
+
+        $reconciliation->delete();
+
+        return redirect()
+            ->route('admin.bank-reconciliations.index')
+            ->with('success', 'Data rekonsiliasi bank berhasil dihapus.');
     }
 }

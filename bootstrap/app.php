@@ -25,6 +25,10 @@ return Application::configure(basePath: dirname(__DIR__))
             guests: '/login',
             users: '/dashboard'
         );
+
+        $middleware->api(prepend: [
+            \Illuminate\Http\Middleware\HandleCors::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
