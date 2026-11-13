@@ -4,6 +4,7 @@
 
 @section('content')
     <div class="feature-page mx-auto min-w-0 max-w-7xl space-y-6 overflow-x-hidden p-3 sm:space-y-8 sm:p-6 lg:p-8">
+        
         {{-- Banner Header --}}
         <section class="dashboard-enter relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-[#104B35] via-[#176B45] to-[#248052] px-4 py-6 text-white shadow-lg shadow-[#104B35]/10 sm:px-8 sm:py-9">
             <div class="pointer-events-none absolute -right-12 -top-24 -z-10 h-72 w-72 rounded-full border border-white/10"></div>
@@ -19,105 +20,134 @@
             </div>
         </section>
 
-        {{-- Section Ringkasan Keuangan (Kartu Nominal) --}}
+        {{-- Section Ringkasan Keuangan (Kartu Nominal UI/UX Refined) --}}
         <section aria-labelledby="financial-summary-heading" class="dashboard-enter space-y-4" style="animation-delay: 70ms">
             <div>
-                <h2 id="financial-summary-heading" class="text-lg font-bold tracking-tight text-[#202B25]">Ikhtisar Keuangan</h2>
-                <p class="mt-1 text-sm text-[#68756D]">Ringkasan berdasarkan data keuangan yang tersedia.</p>
+                <h2 id="financial-summary-heading" class="text-lg font-bold tracking-tight text-[#202B25] dark:text-gray-100">Ikhtisar Keuangan</h2>
+                <p class="mt-1 text-sm text-[#68756D] dark:text-gray-400">Ringkasan berdasarkan data keuangan yang tersedia.</p>
             </div>
 
             <div class="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
                 {{-- Kas Masuk --}}
-                <article class="group min-w-0 rounded-2xl border border-[#E1E8E2] border-t-4 border-t-[#176B45] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5">
+                <article class="group min-w-0 rounded-2xl border border-[#E1E8E2] dark:border-gray-700 border-t-4 border-t-[#176B45] bg-white dark:bg-gray-800 p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5">
                     <div class="flex items-center justify-between gap-2">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-[#68756D]">Kas Masuk</p>
-                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#E8F4EC] text-[#176B45] transition group-hover:bg-[#D5EBDD] sm:h-10 sm:w-10" aria-hidden="true">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-[#68756D] dark:text-gray-400">Kas Masuk</p>
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#E8F4EC] dark:bg-emerald-900/50 text-[#176B45] dark:text-emerald-300 transition group-hover:bg-[#D5EBDD] sm:h-10 sm:w-10" aria-hidden="true">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19V5m0 0l-7 7m7-7l7 7"/></svg>
                         </span>
                     </div>
                     <div class="mt-3 min-w-0 overflow-hidden">
-                        <p class="whitespace-nowrap tabular-nums text-lg font-bold tracking-tight text-[#176B45] sm:text-xl lg:text-2xl">
-                            Rp {{ number_format($data['kas_masuk'] ?? 0, 0, ',', '.') }}
+                        <p class="whitespace-nowrap tabular-nums text-lg font-bold tracking-tight text-[#176B45] dark:text-emerald-400 sm:text-xl lg:text-2xl">
+                            Rp {{ number_format($data['kas_masuk'] ?? $totalInflow ?? 0, 0, ',', '.') }}
                         </p>
                     </div>
                 </article>
 
                 {{-- Kas Keluar --}}
-                <article class="group min-w-0 rounded-2xl border border-[#E1E8E2] border-t-4 border-t-red-500 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5">
+                <article class="group min-w-0 rounded-2xl border border-[#E1E8E2] dark:border-gray-700 border-t-4 border-t-red-500 bg-white dark:bg-gray-800 p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5">
                     <div class="flex items-center justify-between gap-2">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-[#68756D]">
-                            Kas Keluar
-                        </p>
-
-                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 transition group-hover:bg-red-100 sm:h-10 sm:w-10" aria-hidden="true">
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m0 0l7-7m-7 7l-7-7"/>
-                            </svg>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-[#68756D] dark:text-gray-400">Kas Keluar</p>
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 transition group-hover:bg-red-100 sm:h-10 sm:w-10" aria-hidden="true">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m0 0l7-7m-7 7l-7-7"/></svg>
                         </span>
                     </div>
-
                     <div class="mt-3 min-w-0 overflow-hidden">
-                        <p class="whitespace-nowrap tabular-nums text-lg font-bold tracking-tight text-red-600 sm:text-xl lg:text-2xl">
-                            Rp {{ number_format($data['kas_keluar'] ?? 0, 0, ',', '.') }}
+                        <p class="whitespace-nowrap tabular-nums text-lg font-bold tracking-tight text-red-600 dark:text-red-400 sm:text-xl lg:text-2xl">
+                            Rp {{ number_format($data['kas_keluar'] ?? $totalOutflow ?? 0, 0, ',', '.') }}
                         </p>
                     </div>
                 </article>
 
                 {{-- Laba / Rugi Bersih --}}
-                <article class="group min-w-0 rounded-2xl border border-[#E1E8E2] border-t-4 {{ ($data['laba_rugi_bersih'] ?? 0) >= 0 ? 'border-t-[#176B45]' : 'border-t-red-500' }} bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5">
+                @php
+                    $netVal = $data['laba_rugi_bersih'] ?? (($totalInflow ?? 0) - ($totalOutflow ?? 0));
+                @endphp
+                <article class="group min-w-0 rounded-2xl border border-[#E1E8E2] dark:border-gray-700 border-t-4 {{ $netVal >= 0 ? 'border-t-[#176B45]' : 'border-t-red-500' }} bg-white dark:bg-gray-800 p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5">
                     <div class="flex items-center justify-between gap-2">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-[#68756D]">Laba / Rugi Bersih</p>
-                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#E8F4EC] text-[#176B45] transition group-hover:bg-[#D5EBDD] sm:h-10 sm:w-10" aria-hidden="true">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-[#68756D] dark:text-gray-400">Laba / Rugi Bersih</p>
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#E8F4EC] dark:bg-emerald-900/50 text-[#176B45] dark:text-emerald-300 transition group-hover:bg-[#D5EBDD] sm:h-10 sm:w-10" aria-hidden="true">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 17l6-6 4 4 8-8m0 0h-6m6 0v6"/></svg>
                         </span>
                     </div>
                     <div class="mt-3 min-w-0 overflow-hidden">
-                        <p class="whitespace-nowrap tabular-nums text-lg font-bold tracking-tight {{ ($data['laba_rugi_bersih'] ?? 0) >= 0 ? 'text-[#176B45]' : 'text-red-600' }} sm:text-xl lg:text-2xl">
-                            Rp {{ number_format($data['laba_rugi_bersih'] ?? 0, 0, ',', '.') }}
+                        <p class="whitespace-nowrap tabular-nums text-lg font-bold tracking-tight {{ $netVal >= 0 ? 'text-[#176B45] dark:text-emerald-400' : 'text-red-600 dark:text-red-400' }} sm:text-xl lg:text-2xl">
+                            Rp {{ number_format($netVal, 0, ',', '.') }}
                         </p>
                     </div>
                 </article>
 
                 {{-- Gaji Bulan Ini --}}
-                <article class="group min-w-0 rounded-2xl border border-[#E1E8E2] border-t-4 border-t-[#104B35] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5">
+                <article class="group min-w-0 rounded-2xl border border-[#E1E8E2] dark:border-gray-700 border-t-4 border-t-[#104B35] bg-white dark:bg-gray-800 p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5">
                     <div class="flex items-center justify-between gap-2">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-[#68756D]">Gaji Bulan Ini</p>
-                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#E8F4EC] text-[#104B35] transition group-hover:bg-[#D5EBDD] sm:h-10 sm:w-10" aria-hidden="true">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-[#68756D] dark:text-gray-400">Gaji Bulan Ini</p>
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#E8F4EC] dark:bg-emerald-900/50 text-[#104B35] dark:text-emerald-300 transition group-hover:bg-[#D5EBDD] sm:h-10 sm:w-10" aria-hidden="true">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </span>
                     </div>
                     <div class="mt-3 min-w-0 overflow-hidden">
-                        <p class="whitespace-nowrap tabular-nums text-lg font-bold tracking-tight text-[#104B35] sm:text-xl lg:text-2xl">
-                            Rp {{ number_format($data['gaji_bulan_ini'] ?? 0, 0, ',', '.') }}
+                        <p class="whitespace-nowrap tabular-nums text-lg font-bold tracking-tight text-[#104B35] dark:text-emerald-400 sm:text-xl lg:text-2xl">
+                            Rp {{ number_format($data['gaji_bulan_ini'] ?? $payrollTotal ?? 0, 0, ',', '.') }}
                         </p>
                     </div>
                 </article>
             </div>
         </section>
 
-        {{-- Section Aktivitas Terbaru (Hanya 1x) --}}
+        {{-- Seksi Grafik Visual (Fitur dari Main) --}}
+        <section aria-labelledby="visual-charts-heading" class="dashboard-enter space-y-4" style="animation-delay: 100ms">
+            <div>
+                <h2 id="visual-charts-heading" class="text-lg font-bold tracking-tight text-[#202B25] dark:text-gray-100">Visualisasi & Analisis Grafik</h2>
+                <p class="mt-1 text-sm text-[#68756D] dark:text-gray-400">Grafik perbandingan arus kas bulanan dan komposisi pengeluaran.</p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <!-- Grafik Line: Tren Arus Kas -->
+                <div class="lg:col-span-2 rounded-2xl border border-[#E1E8E2] dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm transition sm:p-6">
+                    <div class="mb-4 flex items-center justify-between">
+                        <h3 class="text-sm font-bold text-[#202B25] dark:text-gray-100">Tren Arus Kas (Kas Masuk vs Kas Keluar)</h3>
+                        <span class="rounded bg-[#E8F4EC] dark:bg-emerald-900/40 px-2 py-1 text-xs font-semibold text-[#176B45] dark:text-emerald-300">6 Bulan Terakhir</span>
+                    </div>
+                    <div class="relative h-64">
+                        <canvas id="cashFlowLineChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Grafik Doughnut: Perbandingan Kas -->
+                <div class="rounded-2xl border border-[#E1E8E2] dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm transition sm:p-6">
+                    <div class="mb-4">
+                        <h3 class="text-sm font-bold text-[#202B25] dark:text-gray-100">Perbandingan Kas Masuk & Keluar</h3>
+                        <p class="text-xs text-[#68756D] dark:text-gray-400">Proporsi alokasi dana</p>
+                    </div>
+                    <div class="relative flex h-64 items-center justify-center">
+                        <canvas id="cashDoughnutChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {{-- Section Aktivitas Terbaru --}}
         <section aria-labelledby="recent-activity-heading" class="dashboard-enter space-y-4" style="animation-delay: 140ms">
             <div>
-                <h2 id="recent-activity-heading" class="text-lg font-bold tracking-tight text-[#202B25]">Aktivitas Terbaru</h2>
-                <p class="mt-1 text-sm text-[#68756D]">Transaksi kas dan jurnal pembalikan yang tercatat.</p>
+                <h2 id="recent-activity-heading" class="text-lg font-bold tracking-tight text-[#202B25] dark:text-gray-100">Aktivitas Terbaru</h2>
+                <p class="mt-1 text-sm text-[#68756D] dark:text-gray-400">Transaksi kas dan jurnal pembalikan yang tercatat.</p>
             </div>
 
             <div class="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-2">
                 {{-- Tabel Transaksi Kas Terbaru --}}
-                <section class="min-w-0 overflow-hidden rounded-2xl border border-[#E1E8E2] bg-white shadow-sm">
-                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#E1E8E2] px-4 py-4 sm:flex-nowrap sm:px-6">
+                <section class="min-w-0 overflow-hidden rounded-2xl border border-[#E1E8E2] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#E1E8E2] dark:border-gray-700 px-4 py-4 sm:flex-nowrap sm:px-6">
                         <div class="flex min-w-0 items-center gap-3">
-                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E8F4EC] text-[#176B45]" aria-hidden="true">
+                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E8F4EC] dark:bg-emerald-900/50 text-[#176B45] dark:text-emerald-300" aria-hidden="true">
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                             </span>
                             <div class="min-w-0">
-                                <h3 class="break-words font-bold text-[#202B25]">Transaksi Kas Terbaru</h3>
-                                <p class="mt-0.5 text-xs text-[#68756D]">Rincian transaksi kas</p>
+                                <h3 class="break-words font-bold text-[#202B25] dark:text-gray-100">Transaksi Kas Terbaru</h3>
+                                <p class="mt-0.5 text-xs text-[#68756D] dark:text-gray-400">Rincian transaksi kas</p>
                             </div>
                         </div>
                         @hasanyrole('admin|akuntan|staff')
                             @if(Route::has('admin.cash-transactions.index'))
-                                <a href="{{ route('admin.cash-transactions.index') }}" class="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#176B45] transition hover:bg-[#E8F4EC] hover:text-[#104B35] focus:outline-none focus:ring-2 focus:ring-[#176B45]">
+                                <a href="{{ route('admin.cash-transactions.index') }}" class="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#176B45] dark:text-emerald-400 transition hover:bg-[#E8F4EC] dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-[#176B45]">
                                     Buka modul
                                 </a>
                             @endif
@@ -125,36 +155,36 @@
                     </div>
                     <div class="w-full overflow-x-auto overscroll-x-contain">
                         <table class="w-full min-w-full text-left">
-                            <thead class="bg-[#F6F8F6]">
-                                <tr class="text-[11px] font-semibold uppercase tracking-wider text-[#68756D]">
+                            <thead class="bg-[#F6F8F6] dark:bg-gray-700/50">
+                                <tr class="text-[11px] font-semibold uppercase tracking-wider text-[#68756D] dark:text-gray-400">
                                     <th scope="col" class="px-3 py-3 sm:px-4">No. Transaksi</th>
                                     <th scope="col" class="px-2.5 py-3 sm:px-3">Tanggal</th>
                                     <th scope="col" class="px-2.5 py-3 sm:px-3">Tipe</th>
                                     <th scope="col" class="px-3 py-3 text-right sm:px-4">Jumlah</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-[#E1E8E2] text-sm">
+                            <tbody class="divide-y divide-[#E1E8E2] dark:divide-gray-700 text-sm">
                                 @forelse($data['transaksi_terakhir'] ?? [] as $trx)
-                                    <tr class="transition-colors hover:bg-[#F6F8F6]">
-                                        <td class="max-w-[130px] truncate px-3 py-3 font-mono text-xs font-medium text-[#202B25] sm:max-w-none sm:px-4" title="{{ $trx->transaction_number }}">
+                                    <tr class="transition-colors hover:bg-[#F6F8F6] dark:hover:bg-gray-700/30">
+                                        <td class="max-w-[130px] truncate px-3 py-3 font-mono text-xs font-medium text-[#202B25] dark:text-gray-200 sm:max-w-none sm:px-4" title="{{ $trx->transaction_number }}">
                                             {{ $trx->transaction_number }}
                                         </td>
-                                        <td class="whitespace-nowrap px-2.5 py-3 text-xs text-[#68756D] sm:px-3">{{ $trx->transaction_date }}</td>
+                                        <td class="whitespace-nowrap px-2.5 py-3 text-xs text-[#68756D] dark:text-gray-400 sm:px-3">{{ $trx->transaction_date }}</td>
                                         <td class="px-2.5 py-3 sm:px-3">
-                                            <span class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold {{ $trx->type === 'in' ? 'bg-[#E8F4EC] text-[#176B45]' : 'bg-[#F6F8F6] text-[#68756D]' }}">
-                                                <span class="h-1.5 w-1.5 rounded-full {{ $trx->type === 'in' ? 'bg-[#176B45]' : 'bg-[#68756D]' }}"></span>
+                                            <span class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold {{ $trx->type === 'in' ? 'bg-[#E8F4EC] dark:bg-emerald-900/40 text-[#176B45] dark:text-emerald-300' : 'bg-[#F6F8F6] dark:bg-gray-700 text-[#68756D] dark:text-gray-300' }}">
+                                                <span class="h-1.5 w-1.5 rounded-full {{ $trx->type === 'in' ? 'bg-[#176B45] dark:bg-emerald-400' : 'bg-[#68756D] dark:bg-gray-400' }}"></span>
                                                 {{ $trx->type === 'in' ? 'Masuk' : 'Keluar' }}
                                             </span>
                                         </td>
-                                        <td class="whitespace-nowrap px-3 py-3 text-right font-mono text-xs font-semibold tabular-nums text-[#202B25] sm:px-4">
+                                        <td class="whitespace-nowrap px-3 py-3 text-right font-mono text-xs font-semibold tabular-nums text-[#202B25] dark:text-gray-200 sm:px-4">
                                             Rp {{ number_format($trx->amount, 0, ',', '.') }}
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
                                         <td colspan="4" class="px-6 py-12 text-center">
-                                            <p class="text-sm font-medium text-[#202B25]">Belum ada transaksi kas</p>
-                                            <p class="mt-1 text-xs text-[#68756D]">Transaksi terbaru akan muncul di sini.</p>
+                                            <p class="text-sm font-medium text-[#202B25] dark:text-gray-200">Belum ada transaksi kas</p>
+                                            <p class="mt-1 text-xs text-[#68756D] dark:text-gray-400">Transaksi terbaru akan muncul di sini.</p>
                                         </td>
                                     </tr>
                                 @endforelse
@@ -164,40 +194,42 @@
                 </section>
 
                 {{-- Tabel Jurnal Pembalikan Terbaru --}}
-                <section class="min-w-0 overflow-hidden rounded-2xl border border-[#E1E8E2] bg-white shadow-sm">
-                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#E1E8E2] px-4 py-4 sm:flex-nowrap sm:px-6">
+                <section class="min-w-0 overflow-hidden rounded-2xl border border-[#E1E8E2] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#E1E8E2] dark:border-gray-700 px-4 py-4 sm:flex-nowrap sm:px-6">
                         <div class="flex min-w-0 items-center gap-3">
-                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E8F4EC] text-[#176B45]" aria-hidden="true">
+                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E8F4EC] dark:bg-emerald-900/50 text-[#176B45] dark:text-emerald-300" aria-hidden="true">
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                             </span>
                             <div class="min-w-0">
-                                <h3 class="break-words font-bold text-[#202B25]">Jurnal Pembalikan Terbaru</h3>
-                                <p class="mt-0.5 text-xs text-[#68756D]">Aktivitas jurnal pembalikan</p>
+                                <h3 class="break-words font-bold text-[#202B25] dark:text-gray-100">Jurnal Pembalikan Terbaru</h3>
+                                <p class="mt-0.5 text-xs text-[#68756D] dark:text-gray-400">Aktivitas jurnal pembalikan</p>
                             </div>
                         </div>
                         @hasanyrole('admin|akuntan')
-                            <a href="{{ route('admin.journals.reversals.index') }}" class="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#176B45] transition hover:bg-[#E8F4EC] hover:text-[#104B35] focus:outline-none focus:ring-2 focus:ring-[#176B45]">
-                                Buka modul
-                            </a>
+                            @if(Route::has('admin.journals.reversals.index'))
+                                <a href="{{ route('admin.journals.reversals.index') }}" class="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#176B45] dark:text-emerald-400 transition hover:bg-[#E8F4EC] dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-[#176B45]">
+                                    Buka modul
+                                </a>
+                            @endif
                         @endhasanyrole
                     </div>
 
                     <div class="space-y-3 p-4 sm:p-5">
                         @forelse($data['pembalikan_terakhir'] ?? [] as $rev)
-                            <article class="rounded-xl border border-[#E1E8E2] bg-[#F6F8F6] p-3.5 transition-colors hover:border-[#C6D8CB] sm:p-4">
+                            <article class="rounded-xl border border-[#E1E8E2] dark:border-gray-700 bg-[#F6F8F6] dark:bg-gray-700/40 p-3.5 transition-colors hover:border-[#C6D8CB] sm:p-4">
                                 <div class="flex flex-wrap items-center justify-between gap-2">
-                                    <span class="max-w-full break-all font-mono text-xs font-bold text-[#176B45]">{{ $rev->journal_number }}</span>
-                                    <span class="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#68756D]">
+                                    <span class="max-w-full break-all font-mono text-xs font-bold text-[#176B45] dark:text-emerald-400">{{ $rev->journal_number }}</span>
+                                    <span class="shrink-0 rounded-full bg-white dark:bg-gray-800 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#68756D] dark:text-gray-300">
                                         {{ $rev->status }}
                                     </span>
                                 </div>
-                                <p class="mt-2.5 break-words text-sm font-medium leading-5 text-[#202B25]">{{ $rev->description }}</p>
-                                <p class="mt-2 break-words text-xs text-[#68756D]">{{ $rev->journal_date }} <span class="mx-1 text-[#E1E8E2]">|</span> Ref: {{ $rev->reference_number ?? '-' }}</p>
+                                <p class="mt-2.5 break-words text-sm font-medium leading-5 text-[#202B25] dark:text-gray-200">{{ $rev->description }}</p>
+                                <p class="mt-2 break-words text-xs text-[#68756D] dark:text-gray-400">{{ $rev->journal_date }} <span class="mx-1 text-[#E1E8E2] dark:text-gray-600">|</span> Ref: {{ $rev->reference_number ?? '-' }}</p>
                             </article>
                         @empty
-                            <div class="rounded-xl border border-dashed border-[#E1E8E2] px-5 py-12 text-center">
-                                <p class="text-sm font-medium text-[#202B25]">Belum ada aktivitas pembalikan jurnal</p>
-                                <p class="mt-1 text-xs text-[#68756D]">Jurnal pembalikan terbaru akan muncul di sini.</p>
+                            <div class="rounded-xl border border-dashed border-[#E1E8E2] dark:border-gray-700 px-5 py-12 text-center">
+                                <p class="text-sm font-medium text-[#202B25] dark:text-gray-200">Belum ada aktivitas pembalikan jurnal</p>
+                                <p class="mt-1 text-xs text-[#68756D] dark:text-gray-400">Jurnal pembalikan terbaru akan muncul di sini.</p>
                             </div>
                         @endforelse
                     </div>
@@ -206,3 +238,93 @@
         </section>
     </div>
 @endsection
+
+{{-- Script Chart.js --}}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        const textColor = isDarkMode ? '#CBD5E1' : '#475569';
+        const gridColor = isDarkMode ? '#334155' : '#F1F5F9';
+
+        const monthlyLabels = JSON.parse('{!! json_encode($monthlyLabels ?? ["Jun", "Jul", "Agt", "Sep", "Okt", "Nov"]) !!}');
+        const incomeData = JSON.parse('{!! json_encode($incomeData ?? [0, 0, 0, 0, 0, 0]) !!}');
+        const expenseData = JSON.parse('{!! json_encode($expenseData ?? [0, 0, 0, 0, 0, 0]) !!}');
+        const totalInflow = Number('{{ $data["kas_masuk"] ?? $totalInflow ?? 0 }}');
+        const totalOutflow = Number('{{ $data["kas_keluar"] ?? $totalOutflow ?? 0 }}');
+
+        // 1. Line Chart Arus Kas
+        const elLine = document.getElementById('cashFlowLineChart');
+        if (elLine) {
+            new Chart(elLine.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: monthlyLabels,
+                    datasets: [
+                        {
+                            label: 'Kas Masuk',
+                            data: incomeData,
+                            borderColor: '#176B45',
+                            backgroundColor: 'rgba(23, 107, 69, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Kas Keluar',
+                            data: expenseData,
+                            borderColor: '#DC2626',
+                            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: textColor } }
+                    },
+                    scales: {
+                        x: { ticks: { color: textColor }, grid: { color: gridColor } },
+                        y: {
+                            ticks: {
+                                color: textColor,
+                                callback: function (value) {
+                                    return 'Rp ' + value.toLocaleString('id-ID');
+                                }
+                            },
+                            grid: { color: gridColor }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 2. Doughnut Chart Kas Masuk vs Keluar
+        const elDoughnut = document.getElementById('cashDoughnutChart');
+        if (elDoughnut) {
+            new Chart(elDoughnut.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Kas Masuk', 'Kas Keluar'],
+                    datasets: [{
+                        data: [totalInflow, totalOutflow],
+                        backgroundColor: ['#176B45', '#DC2626'],
+                        borderWidth: 2,
+                        borderColor: isDarkMode ? '#1F2937' : '#FFFFFF'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: textColor } }
+                    }
+                }
+            });
+        }
+    });
+</script>
