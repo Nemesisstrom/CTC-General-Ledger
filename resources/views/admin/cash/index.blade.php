@@ -144,6 +144,7 @@
                                 <th class="py-3 px-3 text-left">Akun Kas</th>
                                 <th class="py-3 px-3 text-left">Akun Lawan</th>
                                 <th class="py-3 px-3 text-right">Jumlah</th>
+                                <th class="py-3 px-3 text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
@@ -157,14 +158,33 @@
                                         </span>
                                     </td>
                                     <td class="py-3 px-3 text-gray-700 font-medium">{{ $trx->account->name }}</td>
-                                    <td class="py-3 px-3 text-gray-700 font-medium">{{ $trx->oppositeAccount->name }}</td>
+                                    <td class="py-3 px-3 text-gray-700 font-medium">
+                                        <div>{{ $trx->oppositeAccount->name }}</div>
+                                        @if($trx->description)
+                                            <div class="text-[11px] font-normal text-gray-400 mt-0.5">{{ $trx->description }}</div>
+                                        @endif
+                                    </td>
                                     <td class="py-3 px-3 text-right font-mono font-bold tabular-nums whitespace-nowrap {{ $trx->type === 'in' ? 'text-emerald-700' : 'text-red-600' }}">
                                         Rp {{ number_format($trx->amount, 0, ',', '.') }}
+                                    </td>
+                                    <td class="py-3 px-3 text-center whitespace-nowrap">
+                                        @role('admin')
+                                            <form action="{{ route('admin.cash-transactions.destroy', $trx->id) }}" method="POST"
+                                                  onsubmit="return confirm('PERHATIAN ADMIN: Yakin ingin menghapus permanen transaksi {{ $trx->transaction_number }}? Jurnal akuntansi terkait juga akan ikut terhapus.');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition">
+                                                    Hapus
+                                                </button>
+                                            </form>
+                                        @else
+                                            <span class="text-gray-400 text-[11px] italic" title="Gunakan menu Jurnal Pembalikan untuk koreksi">Terkunci</span>
+                                        @endrole
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="py-6 text-center text-gray-400 italic">Belum ada transaksi kas yang dicatat.</td>
+                                    <td colspan="7" class="py-6 text-center text-gray-400 italic">Belum ada transaksi kas yang dicatat.</td>
                                 </tr>
                             @endforelse
                         </tbody>

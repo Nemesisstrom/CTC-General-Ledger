@@ -232,5 +232,14 @@ class ChartOfAccountSeeder extends Seeder
             'parent_id' => $expenseParent->id,
             'is_active' => true,
         ]);
+
+        ChartOfAccount::create([
+            'code' => '5-1108',
+            'name' => 'Beban Sosial & CSR',
+            'type' => 'expense',
+            'normal_balance' => 'debit',
+            'parent_id' => $expenseParent->id,
+            'is_active' => true,
+        ]);
     }
 }

@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\CashTransactionController;
 use App\Http\Controllers\Admin\JournalController;
 use App\Http\Controllers\Admin\BankReconciliationController;
 use App\Http\Controllers\Admin\AdjustmentController;
+use App\Http\Controllers\Admin\ClosingController;
 use App\Http\Controllers\Admin\TaxController;
 use App\Http\Controllers\Admin\PayrollController;
 
@@ -82,13 +83,15 @@ Route::middleware('auth')->group(function () {
     // ==========================================
     Route::prefix('admin')->name('admin.')->group(function () {
 
-        // Khusus Role Admin (Manajemen User, COA, & Akses Hapus)
+        // Khusus Role Admin (Manajemen User, COA, Tutup Buku, & Akses Hapus)
         Route::middleware('role:admin')->group(function () {
             Route::resource('users', UserController::class);
             Route::resource('chart-of-accounts', ChartOfAccountController::class);
 
+            // Tutup Buku Akhir Tahun (Closing Entry)
+            Route::post('closing-year-end', [ClosingController::class, 'store'])->name('closing.year-end');
+
             // Hak Akses Penghapusan Permanen
-            Route::delete('cash-transactions/{id}', [CashTransactionController::class, 'destroy'])->name('cash-transactions.destroy');
             Route::delete('bank-reconciliations/{id}', [BankReconciliationController::class, 'destroy'])->name('bank-reconciliations.destroy');
             Route::delete('payrolls/{id}', [PayrollController::class, 'destroy'])->name('payrolls.destroy');
         });
@@ -106,7 +109,9 @@ Route::middleware('auth')->group(function () {
 
         // Modul Transaksi Operasional
         Route::middleware('permission:manage-cash-transactions')->group(function () {
-            Route::resource('cash-transactions', CashTransactionController::class)->only(['index', 'store']);
+            Route::get('cash-transactions', [CashTransactionController::class, 'index'])->name('cash-transactions.index');
+            Route::post('cash-transactions', [CashTransactionController::class, 'store'])->name('cash-transactions.store');
+            Route::delete('cash-transactions/{id}', [CashTransactionController::class, 'destroy'])->name('cash-transactions.destroy');
         });
 
         Route::middleware('permission:manage-bank-reconciliations')->group(function () {

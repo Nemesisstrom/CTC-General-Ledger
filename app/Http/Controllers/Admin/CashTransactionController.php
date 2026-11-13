@@ -16,21 +16,22 @@ class CashTransactionController extends Controller
 {
     public function index(Request $request)
     {
-       // 1. Ambil riwayat transaksi kas & bank terbaru beserta relasi akunnya
+        // 1. Ambil riwayat transaksi kas & bank terbaru beserta relasi akunnya
         $transactions = CashTransaction::with(['account', 'oppositeAccount'])
             ->latest('transaction_date')
             ->latest('id')
             ->paginate(15);
 
-        // 2. Dropdown AKUN KAS / BANK UTAMA (hanya kode kepala 1-11)
+        // 2. Dropdown AKUN KAS / BANK UTAMA (hanya akun turunan kode kepala 1-11)
         $cashAccounts = ChartOfAccount::where('is_active', true)
             ->whereNotNull('parent_id')
             ->where('code', 'like', '1-11%')
             ->orderBy('code')
             ->get();
 
-        // 3. Dropdown AKUN LAWAN (seluruh akun aktif selain 1-11%, termasuk akun induk)
+        // 3. Dropdown AKUN LAWAN (hanya akun turunan selain 1-11%)
         $contraAccounts = ChartOfAccount::where('is_active', true)
+            ->whereNotNull('parent_id')
             ->where('code', 'not like', '1-11%')
             ->orderBy('code')
             ->get();
@@ -135,6 +136,49 @@ class CashTransactionController extends Controller
                 ->back()
                 ->with('error', 'Gagal memproses transaksi: ' . $e->getMessage())
                 ->withInput();
+        }
+    }
+
+    public function destroy($id)
+    {
+        // Lapisan 1: Pastikan hanya role admin yang memiliki otoritas hard delete
+        if (!auth()->user()->hasRole('admin')) {
+            abort(403, 'Hanya Administrator yang memiliki otoritas menghapus transaksi secara permanen.');
+        }
+
+        DB::beginTransaction();
+        try {
+            $cashTransaction = CashTransaction::findOrFail($id);
+
+            // Lapisan 2: Kunci penghapusan jika tahun transaksi sudah di-Tutup Buku
+            $trxYear = date('Y', strtotime($cashTransaction->transaction_date));
+            if (Journal::where('reference_number', "CLS-{$trxYear}-1231")->exists()) {
+                return back()->with('error', "Transaksi tahun {$trxYear} sudah dikunci (Tutup Buku) dan tidak dapat dihapus. Gunakan menu Jurnal Pembalikan.");
+            }
+
+            // Cari jurnal otomatis yang diposting dari transaksi kas ini
+            $journal = Journal::where('reference_number', $cashTransaction->transaction_number)
+                ->orWhere('journal_number', 'JRN-' . $cashTransaction->transaction_number)
+                ->first();
+
+            if ($journal) {
+                JournalDetail::where('journal_id', $journal->id)->delete();
+                $journal->delete();
+            }
+
+            $cashTransaction->delete();
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.cash-transactions.index')
+                ->with('success', 'Transaksi kas beserta jurnal terkait berhasil dihapus permanen.');
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            return redirect()
+                ->back()
+                ->with('error', 'Gagal menghapus transaksi kas: ' . $e->getMessage());
         }
     }
 }

@@ -38,6 +38,52 @@
             </div>
         @endif
 
+        @if($errors->any())
+            <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+                <p class="font-semibold">Proses gagal. Periksa kembali data berikut:</p>
+                <ul class="mt-2 list-inside list-disc space-y-1">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        @role('admin')
+            <!-- Panel Tutup Buku Akhir Tahun (Closing Entry) -->
+            <div class="rounded-2xl border border-amber-200 bg-amber-50/90 p-5 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-200/80 text-amber-900">
+                            Year-End Closing
+                        </span>
+                        <h2 class="text-base font-bold text-amber-950">Tutup Buku Akhir Tahun (31 Desember)</h2>
+                    </div>
+                    <p class="text-xs text-amber-800 leading-relaxed">
+                        Memindahkan seluruh saldo akhir akun <strong>4-xxxx (Pendapatan)</strong> dan <strong>5-xxxx (Beban)</strong> ke akun <strong>3-1200 (Laba Ditahan)</strong> secara otomatis. Jalankan hanya setelah seluruh transaksi & jurnal penyesuaian tahun tersebut selesai.
+                    </p>
+                </div>
+
+                <form action="{{ route('admin.closing.year-end') }}" method="POST"
+                      class="flex items-center gap-2 shrink-0"
+                      onsubmit="return confirm('PERHATIAN: Proses Tutup Buku akan menol-kan seluruh akun Pendapatan & Beban tahun terpilih dan memindahkannya ke 3-1200 (Laba Ditahan). Lanjutkan?');">
+                    @csrf
+                    <select name="year" required class="px-3 py-2 border border-amber-300 bg-white rounded-xl text-sm font-semibold text-gray-800 outline-none focus:ring-2 focus:ring-amber-500">
+                        @for ($y = date('Y'); $y >= 2024; $y--)
+                            <option value="{{ $y }}">Tahun {{ $y }}</option>
+                        @endfor
+                    </select>
+
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-sm transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                        Proses Tutup Buku
+                    </button>
+                </form>
+            </div>
+        @endrole
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             <!-- Form Input Penyesuaian -->
@@ -75,7 +121,7 @@
                     </div>
 
                     <!-- Input Nilai Penyesuaian dengan Format Titik Otomatis -->
-                    <div x-data="{ 
+                    <div x-data="{
                         rawAmount: '{{ old('amount') }}',
                         displayAmount: '{{ old('amount') ? number_format(old('amount'), 0, ',', '.') : '' }}',
                         formatInput(e) {
@@ -85,13 +131,13 @@
                         }
                     }">
                         <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Nilai Penyesuaian</label>
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             inputmode="numeric"
                             x-model="displayAmount"
                             @input="formatInput($event)"
-                            placeholder="0" 
-                            required 
+                            placeholder="0"
+                            required
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500 font-mono font-semibold"
                         >
                         <input type="hidden" name="amount" :value="rawAmount">
