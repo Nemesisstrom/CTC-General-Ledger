@@ -16,24 +16,30 @@ class CashTransactionController extends Controller
 {
     public function index(Request $request)
     {
-        $transactions = CashTransaction::with(['account', 'oppositeAccount', 'creator'])
-            ->orderBy('transaction_date', 'desc')
-            ->orderBy('id', 'desc')
+       // 1. Ambil riwayat transaksi kas & bank terbaru beserta relasi akunnya
+        $transactions = CashTransaction::with(['account', 'oppositeAccount'])
+            ->latest('transaction_date')
+            ->latest('id')
             ->paginate(15);
 
-        // Akun untuk Dropdown Kas & Bank (Asset)
-        $cashAccounts = ChartOfAccount::where('type', 'asset')
-            ->where('is_active', true)
+        // 2. Dropdown AKUN KAS / BANK UTAMA (hanya kode kepala 1-11)
+        $cashAccounts = ChartOfAccount::where('is_active', true)
+            ->whereNotNull('parent_id')
+            ->where('code', 'like', '1-11%')
+            ->orderBy('code')
             ->get();
 
-        // Akun Lawan
-        $allAccounts = ChartOfAccount::where('is_active', true)->get();
+        // 3. Dropdown AKUN LAWAN (seluruh akun aktif selain 1-11%, termasuk akun induk)
+        $contraAccounts = ChartOfAccount::where('is_active', true)
+            ->where('code', 'not like', '1-11%')
+            ->orderBy('code')
+            ->get();
 
-        if ($request->wantsJson()) {
-            return response()->json(['data' => $transactions]);
-        }
-
-        return view('admin.cash.index', compact('transactions', 'cashAccounts', 'allAccounts'));
+        return view('admin.cash.index', compact(
+            'transactions',
+            'cashAccounts',
+            'contraAccounts'
+        ));
     }
 
     public function store(StoreCashTransactionRequest $request)

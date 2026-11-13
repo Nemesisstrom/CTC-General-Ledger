@@ -59,38 +59,44 @@
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Jenis Transaksi</label>
                         <select name="type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500">
-                            <option value="in">Kas Masuk (Pemasukan)</option>
-                            <option value="out">Kas Keluar (Pengeluaran)</option>
+                            <option value="in" {{ old('type') === 'in' ? 'selected' : '' }}>Kas Masuk (Pemasukan)</option>
+                            <option value="out" {{ old('type') === 'out' ? 'selected' : '' }}>Kas Keluar (Pengeluaran)</option>
                         </select>
                     </div>
 
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Tanggal Transaksi</label>
-                        <input type="date" name="transaction_date" value="{{ date('Y-m-d') }}" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500">
+                        <input type="date" name="transaction_date" value="{{ old('transaction_date', date('Y-m-d')) }}" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500">
                     </div>
 
+                    <!-- Dropdown 1: Menggunakan $cashAccounts -->
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Akun Kas / Bank Utama</label>
                         <select name="account_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500">
                             <option value="">-- Pilih Akun Kas/Bank --</option>
                             @foreach($cashAccounts as $account)
-                                <option value="{{ $account->id }}">{{ $account->code }} - {{ $account->name }}</option>
+                                <option value="{{ $account->id }}" {{ old('account_id') == $account->id ? 'selected' : '' }}>
+                                    {{ $account->code }} - {{ $account->name }}
+                                </option>
                             @endforeach
                         </select>
                     </div>
 
+                    <!-- Dropdown 2: Menggunakan $contraAccounts -->
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Akun Lawan (Kategori/Beban/Pendapatan)</label>
                         <select name="opposite_account_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500">
                             <option value="">-- Pilih Akun Lawan --</option>
-                            @foreach($allAccounts as $acc)
-                                <option value="{{ $acc->id }}">{{ $acc->code }} - {{ $acc->name }} ({{ strtoupper($acc->type) }})</option>
+                            @foreach($contraAccounts as $acc)
+                                <option value="{{ $acc->id }}" {{ old('opposite_account_id') == $acc->id ? 'selected' : '' }}>
+                                    {{ $acc->code }} - {{ $acc->name }} ({{ strtoupper($acc->type) }})
+                                </option>
                             @endforeach
                         </select>
                     </div>
 
                     <!-- Input Jumlah Transaksi dengan Format Titik Otomatis -->
-                    <div x-data="{ 
+                    <div x-data="{
                         rawAmount: '{{ old('amount') }}',
                         displayAmount: '{{ old('amount') ? number_format(old('amount'), 0, ',', '.') : '' }}',
                         formatInput(e) {
@@ -100,13 +106,13 @@
                         }
                     }">
                         <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Jumlah Transaksi (Rp)</label>
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             inputmode="numeric"
                             x-model="displayAmount"
                             @input="formatInput($event)"
-                            placeholder="0" 
-                            required 
+                            placeholder="0"
+                            required
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500 font-mono font-semibold"
                         >
                         <input type="hidden" name="amount" :value="rawAmount">
@@ -114,7 +120,7 @@
 
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Keterangan / Memo</label>
-                        <textarea name="description" rows="3" placeholder="Catatan transaksi..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+                        <textarea name="description" rows="3" placeholder="Catatan transaksi..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500">{{ old('description') }}</textarea>
                     </div>
 
                     <button type="submit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-medium py-2.5 rounded-lg transition shadow-sm">

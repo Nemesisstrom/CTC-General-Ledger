@@ -9,7 +9,6 @@ class ChartOfAccountSeeder extends Seeder
 {
     public function run(): void
     {
-        // Bersihkan data lama agar tidak duplikat saat seeding ulang
         ChartOfAccount::query()->delete();
 
         // ==========================================
@@ -29,7 +28,7 @@ class ChartOfAccountSeeder extends Seeder
             'name' => 'Kas Utama',
             'type' => 'asset',
             'normal_balance' => 'debit',
-            'parent_id' => $currentAsset->id, // Akun Turunan
+            'parent_id' => $currentAsset->id,
             'is_active' => true,
         ]);
 
@@ -38,7 +37,7 @@ class ChartOfAccountSeeder extends Seeder
             'name' => 'Bank BCA Operasional',
             'type' => 'asset',
             'normal_balance' => 'debit',
-            'parent_id' => $currentAsset->id, // Akun Turunan
+            'parent_id' => $currentAsset->id,
             'is_active' => true,
         ]);
 
@@ -47,7 +46,7 @@ class ChartOfAccountSeeder extends Seeder
             'name' => 'Piutang Usaha',
             'type' => 'asset',
             'normal_balance' => 'debit',
-            'parent_id' => $currentAsset->id, // Akun Turunan
+            'parent_id' => $currentAsset->id,
             'is_active' => true,
         ]);
 
@@ -65,7 +64,7 @@ class ChartOfAccountSeeder extends Seeder
             'name' => 'Peralatan Kantor',
             'type' => 'asset',
             'normal_balance' => 'debit',
-            'parent_id' => $fixedAsset->id, // Akun Turunan
+            'parent_id' => $fixedAsset->id,
             'is_active' => true,
         ]);
 
@@ -73,14 +72,13 @@ class ChartOfAccountSeeder extends Seeder
             'code' => '1-2150',
             'name' => 'Akumulasi Penyusutan Peralatan',
             'type' => 'asset',
-            'normal_balance' => 'credit', // Kontra aset
-            'parent_id' => $fixedAsset->id, // Akun Turunan
+            'normal_balance' => 'credit',
+            'parent_id' => $fixedAsset->id,
             'is_active' => true,
         ]);
 
-
         // ==========================================
-        // 2. KELOMPOK KEWAJIBAN / LIABILITAS (LIABILITIES - Normal Balance: Credit)
+        // 2. KELOMPOK KEWAJIBAN / LIABILITAS (LIABILITIES)
         // ==========================================
         $currentLiability = ChartOfAccount::create([
             'code' => '2-1000',
@@ -96,7 +94,7 @@ class ChartOfAccountSeeder extends Seeder
             'name' => 'Utang Usaha',
             'type' => 'liability',
             'normal_balance' => 'credit',
-            'parent_id' => $currentLiability->id, // Akun Turunan
+            'parent_id' => $currentLiability->id,
             'is_active' => true,
         ]);
 
@@ -105,13 +103,12 @@ class ChartOfAccountSeeder extends Seeder
             'name' => 'Utang Gaji',
             'type' => 'liability',
             'normal_balance' => 'credit',
-            'parent_id' => $currentLiability->id, // Akun Turunan
+            'parent_id' => $currentLiability->id,
             'is_active' => true,
         ]);
 
-
         // ==========================================
-        // 3. KELOMPOK EKUITAS / MODAL (EQUITY - Normal Balance: Credit)
+        // 3. KELOMPOK EKUITAS / MODAL (EQUITY)
         // ==========================================
         $equityParent = ChartOfAccount::create([
             'code' => '3-1000',
@@ -127,7 +124,7 @@ class ChartOfAccountSeeder extends Seeder
             'name' => 'Modal Disetor',
             'type' => 'equity',
             'normal_balance' => 'credit',
-            'parent_id' => $equityParent->id, // Akun Turunan
+            'parent_id' => $equityParent->id,
             'is_active' => true,
         ]);
 
@@ -136,13 +133,12 @@ class ChartOfAccountSeeder extends Seeder
             'name' => 'Laba Ditahan',
             'type' => 'equity',
             'normal_balance' => 'credit',
-            'parent_id' => $equityParent->id, // Akun Turunan
+            'parent_id' => $equityParent->id,
             'is_active' => true,
         ]);
 
-
         // ==========================================
-        // 4. KELOMPOK PENDAPATAN (REVENUE - Normal Balance: Credit)
+        // 4. KELOMPOK PENDAPATAN (REVENUE)
         // ==========================================
         $revenueParent = ChartOfAccount::create([
             'code' => '4-1000',
@@ -158,13 +154,12 @@ class ChartOfAccountSeeder extends Seeder
             'name' => 'Pendapatan Jasa Layanan Utama',
             'type' => 'revenue',
             'normal_balance' => 'credit',
-            'parent_id' => $revenueParent->id, // Akun Turunan
+            'parent_id' => $revenueParent->id,
             'is_active' => true,
         ]);
 
-
         // ==========================================
-        // 5. KELOMPOK BEBAN (EXPENSE - Normal Balance: Debit)
+        // 5. KELOMPOK BEBAN (EXPENSE)
         // ==========================================
         $expenseParent = ChartOfAccount::create([
             'code' => '5-1000',
@@ -177,10 +172,10 @@ class ChartOfAccountSeeder extends Seeder
 
         ChartOfAccount::create([
             'code' => '5-1101',
-            'name' => 'Beban Gaji Karyawan',
+            'name' => 'Beban Gaji & Honorarium Tim',
             'type' => 'expense',
             'normal_balance' => 'debit',
-            'parent_id' => $expenseParent->id, // Akun Turunan
+            'parent_id' => $expenseParent->id,
             'is_active' => true,
         ]);
 
@@ -189,7 +184,7 @@ class ChartOfAccountSeeder extends Seeder
             'name' => 'Beban Listrik, Air, & Internet',
             'type' => 'expense',
             'normal_balance' => 'debit',
-            'parent_id' => $expenseParent->id, // Akun Turunan
+            'parent_id' => $expenseParent->id,
             'is_active' => true,
         ]);
 
@@ -198,7 +193,43 @@ class ChartOfAccountSeeder extends Seeder
             'name' => 'Beban Penyusutan Peralatan',
             'type' => 'expense',
             'normal_balance' => 'debit',
-            'parent_id' => $expenseParent->id, // Akun Turunan
+            'parent_id' => $expenseParent->id,
+            'is_active' => true,
+        ]);
+
+        ChartOfAccount::create([
+            'code' => '5-1104',
+            'name' => 'Beban Hosting & Domain',
+            'type' => 'expense',
+            'normal_balance' => 'debit',
+            'parent_id' => $expenseParent->id,
+            'is_active' => true,
+        ]);
+
+        ChartOfAccount::create([
+            'code' => '5-1105',
+            'name' => 'Beban Perlengkapan Kantor (ATK)',
+            'type' => 'expense',
+            'normal_balance' => 'debit',
+            'parent_id' => $expenseParent->id,
+            'is_active' => true,
+        ]);
+
+        ChartOfAccount::create([
+            'code' => '5-1106',
+            'name' => 'Beban Transportasi & Perjalanan',
+            'type' => 'expense',
+            'normal_balance' => 'debit',
+            'parent_id' => $expenseParent->id,
+            'is_active' => true,
+        ]);
+
+        ChartOfAccount::create([
+            'code' => '5-1107',
+            'name' => 'Beban Konsumsi & Jamuan',
+            'type' => 'expense',
+            'normal_balance' => 'debit',
+            'parent_id' => $expenseParent->id,
             'is_active' => true,
         ]);
     }

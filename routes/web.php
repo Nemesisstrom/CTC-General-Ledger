@@ -27,7 +27,7 @@ use App\Http\Controllers\Admin\Reports\PayrollReportController;
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes
+| Web Routes - Sistem Keuangan CTC General Ledger
 |--------------------------------------------------------------------------
 */
 
@@ -56,11 +56,11 @@ Route::middleware('guest')->group(function () {
 });
 
 // ==========================================
-// Authenticated Routes (Akses Pengguna Terautentikasi)
+// Authenticated Routes (Pengguna Terautentikasi)
 // ==========================================
 Route::middleware('auth')->group(function () {
 
-    // Dashboard Utama (Di luar prefix /admin, nama route: dashboard)
+    // Dashboard Utama
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->middleware(['verified', 'role:admin|akuntan|staff'])
         ->name('dashboard');
@@ -82,37 +82,29 @@ Route::middleware('auth')->group(function () {
     // ==========================================
     Route::prefix('admin')->name('admin.')->group(function () {
 
-        // ------------------------------------------
         // Khusus Role Admin (Manajemen User, COA, & Akses Hapus)
-        // ------------------------------------------
         Route::middleware('role:admin')->group(function () {
             Route::resource('users', UserController::class);
             Route::resource('chart-of-accounts', ChartOfAccountController::class);
 
-            // Hak Akses Penghapusan Permanen (Strictly Admin Only)
+            // Hak Akses Penghapusan Permanen
             Route::delete('cash-transactions/{id}', [CashTransactionController::class, 'destroy'])->name('cash-transactions.destroy');
             Route::delete('bank-reconciliations/{id}', [BankReconciliationController::class, 'destroy'])->name('bank-reconciliations.destroy');
             Route::delete('payrolls/{id}', [PayrollController::class, 'destroy'])->name('payrolls.destroy');
         });
 
-        // ------------------------------------------
-        // Modul Jurnal Umum & Reversal (Admin & Akuntan)
-        // ------------------------------------------
-        // Modul Jurnal Umum (Hanya Tampil & Posting)
+        // Modul Jurnal Umum & Reversal
         Route::middleware('permission:manage-journals')->group(function () {
             Route::get('/journals', [JournalController::class, 'index'])->name('journals.index');
             Route::post('/journals', [JournalController::class, 'store'])->name('journals.store');
         });
 
-        // Modul Khusus Jurnal Pembalikan (Reversal Ledger)
         Route::middleware('permission:reverse-journals')->group(function () {
             Route::get('/journals/reversals', [JournalController::class, 'reversalIndex'])->name('journals.reversals.index');
             Route::post('/journals/{id}/reverse', [JournalController::class, 'reverse'])->name('journals.reverse');
         });
 
-        // ------------------------------------------
         // Modul Transaksi Operasional
-        // ------------------------------------------
         Route::middleware('permission:manage-cash-transactions')->group(function () {
             Route::resource('cash-transactions', CashTransactionController::class)->only(['index', 'store']);
         });
@@ -121,7 +113,7 @@ Route::middleware('auth')->group(function () {
             Route::resource('bank-reconciliations', BankReconciliationController::class)->only(['index', 'store', 'update']);
         });
 
-        // Modul Jurnal Penyesuaian & Reversal
+        // Modul Jurnal Penyesuaian
         Route::middleware('permission:manage-adjustments')->group(function () {
             Route::get('adjustments', [AdjustmentController::class, 'index'])->name('adjustments.index');
             Route::post('adjustments', [AdjustmentController::class, 'store'])->name('adjustments.store');
@@ -134,7 +126,6 @@ Route::middleware('auth')->group(function () {
             Route::post('/taxes/process', [TaxController::class, 'processTaxTransaction'])->name('taxes.process');
         });
 
-        // CRUD Master Data Skema Pajak (Khusus Role Admin)
         Route::middleware('role:admin')->group(function () {
             Route::post('/taxes/master', [TaxController::class, 'store'])->name('taxes.store');
             Route::put('/taxes/master/{tax}', [TaxController::class, 'update'])->name('taxes.update');
@@ -150,43 +141,43 @@ Route::middleware('auth')->group(function () {
         // ==========================================
         Route::prefix('reports')->name('reports.')->group(function () {
 
-            // 1. Buku Besar (General Ledger)
+            // 1. Buku Besar
             Route::middleware('permission:view-reports-general-ledger')->group(function () {
                 Route::get('/general-ledger', [GeneralLedgerReportController::class, 'index'])->name('general-ledger');
                 Route::get('/general-ledger/pdf', [GeneralLedgerReportController::class, 'exportPdf'])->name('general-ledger.pdf');
                 Route::get('/general-ledger/excel', [GeneralLedgerReportController::class, 'exportExcel'])->name('general-ledger.excel');
             });
 
-            // 2. Laba Rugi (Profit & Loss)
+            // 2. Laba Rugi
             Route::middleware('permission:view-reports-profit-loss')->group(function () {
                 Route::get('/profit-loss', [ProfitLossReportController::class, 'index'])->name('profit-loss');
                 Route::get('/profit-loss/pdf', [ProfitLossReportController::class, 'exportPdf'])->name('profit-loss.pdf');
                 Route::get('/profit-loss/excel', [ProfitLossReportController::class, 'exportExcel'])->name('profit-loss.excel');
             });
 
-            // 3. Neraca (Balance Sheet)
+            // 3. Neraca
             Route::middleware('permission:view-reports-balance-sheet')->group(function () {
                 Route::get('/balance-sheet', [BalanceSheetReportController::class, 'index'])->name('balance-sheet');
                 Route::get('/balance-sheet/pdf', [BalanceSheetReportController::class, 'exportPdf'])->name('balance-sheet.pdf');
                 Route::get('/balance-sheet/excel', [BalanceSheetReportController::class, 'exportExcel'])->name('balance-sheet.excel');
             });
 
-            // 4. Laporan Pajak (Tax Report)
+            // 4. Laporan Pajak
             Route::middleware('permission:view-reports-tax')->group(function () {
                 Route::get('/tax', [TaxReportController::class, 'index'])->name('tax');
                 Route::get('/tax/pdf', [TaxReportController::class, 'exportPdf'])->name('tax.pdf');
                 Route::get('/tax/excel', [TaxReportController::class, 'exportExcel'])->name('tax.excel');
             });
 
-            // 5. Laporan Penggajian (Payroll Report)
+            // 5. Laporan Penggajian
             Route::middleware('permission:view-reports-payroll')->group(function () {
                 Route::get('/payroll', [PayrollReportController::class, 'index'])->name('payroll');
                 Route::get('/payroll/pdf', [PayrollReportController::class, 'exportPdf'])->name('payroll.pdf');
                 Route::get('/payroll/excel', [PayrollReportController::class, 'exportExcel'])->name('payroll.excel');
             });
 
-        }); // End Reports Prefix
+        }); // End Reports
 
     }); // End Admin Prefix
 
-}); // End Auth Middleware
+}); // End Auth Group
