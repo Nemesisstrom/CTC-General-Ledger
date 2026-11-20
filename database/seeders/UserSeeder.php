@@ -29,7 +29,7 @@ class UserSeeder extends Seeder
             ['email' => 'akuntan@keuangan.com'],
             [
                 'name' => 'Staff Akuntansi',
-                'password' => Hash::make('akuntan123'),
+                'password' => bcrypt('akuntan123'),
                 'role' => 'akuntan', // Sesuaikan dengan nama role di tabel roles
                 'is_active' => true,
                 'base_salary' => 4000000,
@@ -43,7 +43,7 @@ class UserSeeder extends Seeder
             ['email' => 'staff@keuangan.com'],
             [
                 'name' => 'Staff Operasional',
-                'password' => Hash::make('staff123'),
+                'password' => bcrypt('staff123'),
                 'role' => 'staff',
                 'is_active' => true,
                 'base_salary' => 5000000,
