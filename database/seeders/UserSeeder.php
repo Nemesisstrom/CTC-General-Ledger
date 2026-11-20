@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
@@ -16,7 +15,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Administrator Keuangan',
                 'password' => bcrypt('admin123'),
-                'role' => 'admin', // Sesuaikan dengan nama role di tabel roles
+                'role' => 'admin',
                 'is_active' => true,
                 'base_salary' => 5000000,
                 'email_verified_at' => now(),
@@ -30,7 +29,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Staff Akuntansi',
                 'password' => bcrypt('akuntan123'),
-                'role' => 'akuntan', // Sesuaikan dengan nama role di tabel roles
+                'role' => 'akuntan',
                 'is_active' => true,
                 'base_salary' => 4000000,
                 'email_verified_at' => now(),
