@@ -2,11 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 class RolePermissionSeeder extends Seeder
@@ -73,46 +71,5 @@ class RolePermissionSeeder extends Seeder
             'manage-cash-transactions',
             'manage-payrolls',
         ]);
-
-        // 5. Buat User Default (Gunakan firstOrCreate agar Seeder Idempotent)
-        
-        // Account Admin
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@keuangan.com'],
-            [
-                'name'              => 'Administrator',
-                'password'          => Hash::make('admin123'),
-                'role'              => 'admin',
-                'base_salary'       => 10000000,
-                'email_verified_at' => now(),
-            ]
-        );
-        $admin->syncRoles([$adminRole]);
-
-        // Account Akuntan
-        $akuntan = User::firstOrCreate(
-            ['email' => 'akuntan@keuangan.com'],
-            [
-                'name'              => 'Akuntan Utama',
-                'password'          => Hash::make('akuntan123'),
-                'role'              => 'akuntan',
-                'base_salary'       => 8000000,
-                'email_verified_at' => now(),
-            ]
-        );
-        $akuntan->syncRoles([$akuntanRole]);
-
-        // Account Staff
-        $staff = User::firstOrCreate(
-            ['email' => 'staff@keuangan.com'],
-            [
-                'name'              => 'Staff Operasional',
-                'password'          => Hash::make('staff123'),
-                'role'              => 'staff',
-                'base_salary'       => 5000000,
-                'email_verified_at' => now(),
-            ]
-        );
-        $staff->syncRoles([$staffRole]);
     }
 }
