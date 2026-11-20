@@ -12,7 +12,7 @@
 
     <style>
         [x-cloak] { display: none !important; }
-        
+
         @keyframes floatLogo {
             0%, 100% { transform: translateY(0px) rotate(0deg); }
             50% { transform: translateY(-7px) rotate(1.5deg); }
@@ -54,7 +54,7 @@
 
     {{-- MAIN FORM CARD --}}
     <div class="relative z-10 w-full max-w-md bg-white/95 backdrop-blur-xl rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] border border-white/30 p-8 sm:p-9 my-8">
-        
+
         <div class="text-center mb-6">
             <div class="inline-block relative mb-2 group">
                 <div class="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-teal-400 rounded-2xl blur-md group-hover:blur-lg opacity-60 transition duration-300"></div>
@@ -109,7 +109,26 @@
                 </div>
             </div>
 
-            <p class="text-[10px] text-gray-400">Akun baru akan diberikan akses Staff Operasional. Akses lainnya dikelola oleh administrator.</p>
+            {{-- Pemilihan Cabang Operasional --}}
+            <div>
+                <label for="branch_id" class="block text-xs font-bold text-[#526057] mb-1">Cabang Operasional</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 pointer-events-none">
+                        <i class="fa-solid fa-code-branch text-xs"></i>
+                    </span>
+                    <select id="branch_id" name="branch_id" required
+                        class="w-full pl-10 pr-8 py-2 bg-[#F9FBF9] border border-[#E1E8E2] rounded-xl text-xs text-[#202B25] outline-none transition focus:border-[#176B45] focus:bg-white focus:ring-2 focus:ring-[#176B45]/10 cursor-pointer">
+                        <option value="" disabled {{ old('branch_id') ? '' : 'selected' }}>-- Pilih Cabang Penempatan --</option>
+                        @foreach($branches ?? [] as $branch)
+                            <option value="{{ $branch->id }}" {{ old('branch_id') == $branch->id ? 'selected' : '' }}>
+                                {{ $branch->code }} - {{ $branch->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
+            <p class="text-[10px] text-gray-400">Akun baru akan diberikan akses Staff Operasional pada cabang terpilih. Akses lainnya dikelola oleh administrator.</p>
 
             {{-- Kata Sandi --}}
             <div>
@@ -148,7 +167,7 @@
         </form>
 
         <p class="text-center text-xs text-[#68756D] mt-5 pt-3 border-t border-[#E1E8E2]">
-            Sudah memiliki akun? 
+            Sudah memiliki akun?
             <a href="{{ route('login') }}" class="text-[#176B45] font-bold hover:underline">Masuk di sini</a>
         </p>
     </div>

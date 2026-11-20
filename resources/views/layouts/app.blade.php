@@ -35,8 +35,6 @@
         defer
         src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-
-
     @yield('styles')
 </head>
 
@@ -112,9 +110,18 @@
                     </div>
                 </a>
 
-                {{-- Master Data --}}
+                {{-- Master Data (Khusus Admin) --}}
                 @role('admin')
                     <p class="sidebar-section-label px-3 pt-5 pb-1.5 text-[10px]">Master Data</p>
+
+                    <a href="{{ route('admin.branches.index') }}" @if(request()->routeIs('admin.branches.*')) aria-current="page" @endif
+                       class="sidebar-link relative group flex items-center rounded-xl py-2.5 text-xs font-semibold">
+                        <i class="sidebar-icon fa-solid fa-code-branch text-sm w-5 text-center shrink-0"></i>
+                        <span class="sidebar-label">Manajemen Cabang</span>
+                        <div class="sidebar-tooltip hidden absolute left-full ml-3 px-3 py-1.5 bg-slate-900 border border-neutral-700 text-white text-xs font-semibold rounded-xl shadow-xl whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50">
+                            Manajemen Cabang
+                        </div>
+                    </a>
 
                     <a href="{{ route('admin.users.index') }}" @if(request()->routeIs('admin.users.*')) aria-current="page" @endif
                        class="sidebar-link relative group flex items-center rounded-xl py-2.5 text-xs font-semibold">
@@ -239,15 +246,16 @@
                         </div>
                     </a>
                 @endhasanyrole
+
             </nav>
 
-            {{-- Profil User Bottom Card --}}
+            {{-- Profil User Bottom Card (Tanpa Ikon Logout) --}}
             <div class="border-t border-[var(--sidebar-border)] p-3 shrink-0">
-                <div class="sidebar-user-card flex items-center justify-between rounded-xl p-2 transition-colors"
-                     style="background-color: var(--user-card-bg); border: 1px solid var(--user-card-border);">
+                <div class="sidebar-user-card flex items-center rounded-xl p-2 transition-colors"
+                style="background-color: var(--user-card-bg); border: 1px solid var(--user-card-border);">
                     <div class="sidebar-user-info flex items-center gap-2.5 min-w-0">
                         <div class="w-7 h-7 rounded-lg text-white font-extrabold flex items-center justify-center text-xs shrink-0 shadow-xs"
-                             style="background-color: var(--user-card-avatar-bg);" title="{{ auth()->user()->name }}">
+                        style="background-color: var(--user-card-avatar-bg);" title="{{ auth()->user()->name }}">
                             {{ strtoupper(substr(auth()->user()->name ?? 'A', 0, 1)) }}
                         </div>
                         <div class="sidebar-user-text min-w-0 leading-tight">
@@ -256,18 +264,6 @@
                                 {{ auth()->user()->getRoleNames()->first() ?? 'User' }}
                             </p>
                         </div>
-                    </div>
-
-                    {{-- Tombol Keluar Sesi MERAH --}}
-                    <div class="flex items-center gap-1 shrink-0">
-                        <form action="{{ route('logout') }}" method="POST" class="inline-flex">
-                            @csrf
-                            <button type="submit" title="Keluar Sesi"
-                                class="btn-press w-7 h-7 rounded-lg flex items-center justify-center transition"
-                                style="background-color: var(--logout-btn-bg); border: 1px solid var(--logout-btn-border); color: var(--logout-btn-text);">
-                                <i class="fa-solid fa-right-from-bracket text-[10px]"></i>
-                            </button>
-                        </form>
                     </div>
                 </div>
             </div>
@@ -292,6 +288,36 @@
                 </div>
 
                 <div class="flex items-center justify-end gap-2.5 shrink-0">
+                    {{-- Switcher Cabang Aktif (Admin & Akuntan untuk Konsolidasi) --}}
+                    @hasanyrole('admin|akuntan')
+                        @php($navBranches = \App\Models\Branch::where('is_active', true)->orderBy('name')->get())
+                        @if($navBranches->isNotEmpty())
+                            <form action="{{ route('admin.switch-branch') }}" method="POST" class="hidden md:flex items-center">
+                                @csrf
+                                <div class="relative flex items-center">
+                                    <i class="fa-solid fa-code-branch text-[11px] text-[#176B45] dark:text-emerald-400 absolute left-3 pointer-events-none"></i>
+                                    <select name="branch_id" onchange="this.form.submit()" aria-label="Pilih Cabang Aktif"
+                                        class="h-9 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] pl-8 pr-7 text-xs font-semibold text-[var(--text-primary)] focus:border-[#176B45] focus:outline-none cursor-pointer">
+                                        <option value="">Semua Cabang (Konsolidasi)</option>
+                                        @foreach($navBranches as $navBranch)
+                                            <option value="{{ $navBranch->id }}" {{ session('active_branch_id') == $navBranch->id ? 'selected' : '' }}>
+                                                {{ $navBranch->code }} - {{ $navBranch->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </form>
+                        @endif
+                    @else
+                        {{-- Info Cabang Terkunci untuk Staff --}}
+                        @if(auth()->user()->branch)
+                            <div class="hidden md:inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+                                <i class="fa-solid fa-location-dot text-[#176B45] dark:text-emerald-400 text-[11px]"></i>
+                                <span>{{ auth()->user()->branch->name }}</span>
+                            </div>
+                        @endif
+                    @endhasanyrole
+
                     {{-- Dual Theme Switcher Toggle (Light/Dark) --}}
                     <button type="button" @click="toggleTheme()" title="Ubah Tema (Light/Dark)"
                         class="btn-press relative flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border-color)] bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[var(--bg-main)] focus:outline-none">
@@ -301,15 +327,55 @@
 
                     <div class="h-5 w-px bg-[var(--border-color)] hidden sm:block"></div>
 
-                    {{-- Badge User Topbar Kanan Atas (Container Abu-Abu di Light Mode, Font Admin Putih & Samping Tetap Hijau CTC) --}}
+                    {{-- User Dropdown Topbar Kanan Atas (Tanpa kata "Halo,", berisi Profil & Logout) --}}
                     @php($activeRole = auth()->user()->getRoleNames()->first() ?? session('active_role', 'GUEST'))
-                    <div class="inline-flex items-center gap-2 rounded-xl border border-gray-300 dark:border-emerald-800/50 bg-gray-200 dark:bg-emerald-950/60 px-3 py-1.5 text-xs font-semibold shadow-2xs transition-colors">
-                        <span class="hidden sm:inline-block font-bold text-gray-800 dark:text-emerald-300 text-xs max-w-[140px] md:max-w-[200px] lg:max-w-none truncate">
-                            Halo, {{ auth()->user()->name }}
-                        </span>
-                        <span class="rounded-md bg-[#176B45] dark:bg-emerald-500 text-white dark:text-slate-950 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider shrink-0 shadow-xs">
-                            {{ str_contains(strtolower($activeRole), 'admin') ? 'Admin' : $activeRole }}
-                        </span>
+                    <div class="relative" x-data="{ userMenuOpen: false }" @click.outside="userMenuOpen = false" @keydown.escape.window="userMenuOpen = false">
+                        <button type="button" @click="userMenuOpen = !userMenuOpen"
+                            :aria-expanded="userMenuOpen"
+                            aria-haspopup="true"
+                            class="btn-press inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold shadow-2xs transition-all cursor-pointer {{ request()->routeIs('profile.*') ? 'border-[#176B45] dark:border-emerald-400 ring-2 ring-[#176B45]/20 dark:ring-emerald-400/20 bg-emerald-50 dark:bg-slate-800' : 'border-gray-300 dark:border-slate-700 bg-gray-100 hover:bg-gray-200/80 dark:bg-slate-800/90 dark:hover:bg-slate-800' }}">
+                            <span class="hidden sm:inline-block font-bold text-gray-800 dark:text-slate-100 text-xs max-w-[140px] md:max-w-[200px] lg:max-w-none truncate">
+                                {{ auth()->user()->name }}
+                            </span>
+                            <span class="rounded-md bg-[#176B45] dark:bg-emerald-500 text-white dark:text-slate-950 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider shrink-0 shadow-xs">
+                                {{ str_contains(strtolower($activeRole), 'admin') ? 'Admin' : $activeRole }}
+                            </span>
+                            <i class="fa-solid fa-chevron-down text-[10px] text-gray-600 dark:text-slate-400 transition-transform duration-200"
+                            :class="userMenuOpen ? 'rotate-180' : ''"></i>
+                        </button>
+
+                        {{-- Dropdown Menu dengan Kontras Tinggi pada Dark Mode --}}
+                        <div x-cloak x-show="userMenuOpen"
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
+                            x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                            x-transition:leave-end="opacity-0 scale-95 -translate-y-1"
+                            class="absolute right-0 mt-2 w-56 origin-top-right rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1.5 shadow-xl shadow-black/15 dark:shadow-black/60 ring-1 ring-black/5 dark:ring-white/10 z-50">
+
+                            <div class="px-3 py-2 border-b border-gray-100 dark:border-slate-800 mb-1">
+                                <p class="text-xs font-bold text-gray-900 dark:text-slate-100 truncate">{{ auth()->user()->name }}</p>
+                                <p class="text-[11px] text-gray-500 dark:text-slate-400 truncate">{{ auth()->user()->email }}</p>
+                            </div>
+
+                            <a href="{{ route('profile.edit') }}"
+                            class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold transition-colors {{ request()->routeIs('profile.*') ? 'bg-emerald-50 dark:bg-emerald-500/15 text-[#176B45] dark:text-emerald-300' : 'text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800' }}">
+                                <i class="fa-solid fa-user-gear w-4 text-center text-[#176B45] dark:text-emerald-400"></i>
+                                <span>Profil Saya</span>
+                            </a>
+
+                            <div class="my-1 border-t border-gray-100 dark:border-slate-800"></div>
+
+                            <form action="{{ route('logout') }}" method="POST">
+                                @csrf
+                                <button type="submit"
+                                    class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-red-600 dark:text-rose-400 hover:bg-red-50 dark:hover:bg-rose-500/15 transition-colors cursor-pointer">
+                                    <i class="fa-solid fa-right-from-bracket w-4 text-center"></i>
+                                    <span>Keluar (Logout)</span>
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </header>

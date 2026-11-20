@@ -3,11 +3,11 @@
 @section('title', 'Manajemen User - Sistem Keuangan CTC')
 
 @section('content')
-    <div x-data="{ 
-            openCreateModal: false, 
-            openEditModal: false, 
-            editData: {}, 
-            search: '', 
+    <div x-data="{
+            openCreateModal: false,
+            openEditModal: false,
+            editData: {},
+            search: '',
             roleFilter: '',
             createSalaryDisplay: '',
             createSalaryRaw: '',
@@ -38,15 +38,15 @@
                     this.editSalaryDisplay = this.formatRupiah(raw);
                 }
             }
-        }" 
+        }"
         x-init="
             $watch('openCreateModal', val => document.body.style.overflow = (val || openEditModal) ? 'hidden' : '');
             $watch('openEditModal', val => document.body.style.overflow = (val || openCreateModal) ? 'hidden' : '');
         "
         class="feature-page min-w-0 p-3 sm:p-6 lg:p-8 space-y-6">
-        
+
         <main class="mx-auto max-w-7xl space-y-6">
-            
+
             {{-- Header Banner --}}
             <section class="dashboard-enter relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-[#104B35] via-[#176B45] to-[#248052] px-4 py-6 text-white shadow-lg shadow-[#104B35]/10 sm:px-8 sm:py-8">
                 <div class="pointer-events-none absolute -right-12 -top-24 -z-10 h-72 w-72 rounded-full border border-white/10"></div>
@@ -58,10 +58,10 @@
                             Manajemen Pengguna
                         </div>
                         <p class="mt-1 text-xs text-[#E8F4EC] sm:text-sm">
-                            Kelola akun pengguna, hak akses (roles), dan informasi gaji dasar.
+                            Kelola akun pengguna, cabang penempatan, hak akses (roles), dan informasi gaji dasar.
                         </p>
                     </div>
-                    <button @click="openCreateModal = true; createSalaryDisplay = ''; createSalaryRaw = ''" 
+                    <button @click="openCreateModal = true; createSalaryDisplay = ''; createSalaryRaw = ''"
                         class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#104B35] shadow-sm transition hover:bg-[#E8F4EC] focus:outline-none focus:ring-2 focus:ring-white/50">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
                         Tambah User Baru
@@ -101,11 +101,12 @@
             {{-- Table Container --}}
             <div class="rounded-2xl border border-[#E1E8E2] bg-white shadow-sm overflow-hidden min-w-0">
                 <div class="w-full overflow-x-auto overscroll-x-contain">
-                    <table class="w-full min-w-[800px] text-left">
+                    <table class="w-full min-w-[850px] text-left">
                         <thead class="bg-[#F6F8F6]">
                             <tr class="text-[11px] font-semibold uppercase tracking-wider text-[#68756D]">
                                 <th scope="col" class="py-3.5 px-5">Pengguna</th>
                                 <th scope="col" class="py-3.5 px-4">Role</th>
+                                <th scope="col" class="py-3.5 px-4">Cabang</th>
                                 <th scope="col" class="py-3.5 px-4">Gaji Pokok</th>
                                 <th scope="col" class="py-3.5 px-4 text-center">Status</th>
                                 <th scope="col" class="py-3.5 px-5 text-right">Aksi</th>
@@ -124,6 +125,16 @@
                                             {{ $user->getRoleNames()->first() ?? 'Staff' }}
                                         </span>
                                     </td>
+                                    <td class="py-3.5 px-4 whitespace-nowrap">
+                                        @if($user->branch)
+                                            <span class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-[#176B45] border border-[#C6E4D0]">
+                                                <i class="fa-solid fa-code-branch text-[10px]"></i>
+                                                {{ $user->branch->code }} - {{ $user->branch->name }}
+                                            </span>
+                                        @else
+                                            <span class="text-xs font-medium text-[#68756D]">Semua Cabang (Pusat)</span>
+                                        @endif
+                                    </td>
                                     <td class="py-3.5 px-4 font-mono text-xs font-semibold tabular-nums text-[#202B25] whitespace-nowrap">
                                         Rp {{ number_format($user->base_salary ?? 0, 0, ',', '.') }}
                                     </td>
@@ -135,16 +146,17 @@
                                     </td>
                                     <td class="py-3.5 px-5 text-right whitespace-nowrap">
                                         <div class="inline-flex items-center gap-2 justify-end">
-                                            <button @click="openEditModal = true; 
+                                            <button @click="openEditModal = true;
                                                 editData = {
                                                     id: '{{ $user->id }}',
                                                     name: '{{ addslashes($user->name) }}',
                                                     email: '{{ $user->email }}',
                                                     role: '{{ $user->getRoleNames()->first() ?? '' }}',
+                                                    branch_id: '{{ $user->branch_id ?? '' }}',
                                                     base_salary: '{{ (int) ($user->base_salary ?? 0) }}',
                                                     is_active: '{{ $user->is_active ? 1 : 0 }}'
                                                 };
-                                                onSalaryInput('edit', '{{ (int) ($user->base_salary ?? 0) }}')" 
+                                                onSalaryInput('edit', '{{ (int) ($user->base_salary ?? 0) }}')"
                                                 class="rounded-lg bg-[#F6F8F6] px-2.5 py-1.5 text-xs font-semibold text-[#176B45] border border-[#E1E8E2] transition hover:bg-[#E8F4EC] hover:border-[#C6E4D0]">
                                                 Edit
                                             </button>
@@ -162,7 +174,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="py-12 text-center text-[#68756D]">
+                                    <td colspan="6" class="py-12 text-center text-[#68756D]">
                                         <p class="text-sm font-medium text-[#202B25]">Belum ada data pengguna</p>
                                         <p class="mt-1 text-xs">Klik tombol "Tambah User Baru" untuk menambahkan.</p>
                                     </td>
@@ -176,7 +188,7 @@
 
         {{-- Modal Tambah User --}}
         <template x-teleport="body">
-            <div x-show="openCreateModal" 
+            <div x-show="openCreateModal"
                  x-transition:enter="transition ease-out duration-200"
                  x-transition:enter-start="opacity-0"
                  x-transition:enter-end="opacity-100"
@@ -184,7 +196,7 @@
                  x-transition:leave-start="opacity-100"
                  x-transition:leave-end="opacity-0"
                  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 overflow-y-auto" x-cloak>
-                
+
                 <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-[#E1E8E2] my-auto" @click.away="openCreateModal = false">
                     <div class="flex items-center justify-between pb-3 border-b border-[#E1E8E2] mb-4">
                         <h3 class="text-base font-bold text-[#202B25]">Tambah User Baru</h3>
@@ -192,7 +204,7 @@
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                         </button>
                     </div>
-                    
+
                     <form action="{{ route('admin.users.store') }}" method="POST" class="space-y-3">
                         @csrf
                         <div>
@@ -217,12 +229,21 @@
                             </select>
                         </div>
                         <div>
+                            <label class="block text-xs font-semibold text-[#68756D] mb-1">Cabang Penempatan</label>
+                            <select name="branch_id" class="w-full px-3 py-2 border border-[#E1E8E2] rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#176B45] focus:border-transparent">
+                                <option value="">Semua Cabang (Pusat / Lintas Cabang)</option>
+                                @foreach($branches as $branch)
+                                    <option value="{{ $branch->id }}">{{ $branch->code }} - {{ $branch->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
                             <label class="block text-xs font-semibold text-[#68756D] mb-1">Gaji Pokok (Rp)</label>
-                            <input type="text" 
-                                   x-model="createSalaryDisplay" 
-                                   @input="onSalaryInput('create', $event.target.value)" 
-                                   placeholder="Contoh: 5.000.000" 
-                                   required 
+                            <input type="text"
+                                   x-model="createSalaryDisplay"
+                                   @input="onSalaryInput('create', $event.target.value)"
+                                   placeholder="Contoh: 5.000.000"
+                                   required
                                    class="w-full px-3 py-2 border border-[#E1E8E2] rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#176B45] focus:border-transparent">
                             <input type="hidden" name="base_salary" :value="createSalaryRaw">
                         </div>
@@ -235,22 +256,22 @@
             </div>
         </template>
 
-        {{-- Modal Edit User (Tanpa Tombol X & Tanpa Scrollbar) --}}
+        {{-- Modal Edit User --}}
         <template x-teleport="body">
-            <div x-show="openEditModal" 
+            <div x-show="openEditModal"
                  x-transition:enter="transition ease-out duration-200"
                  x-transition:enter-start="opacity-0"
                  x-transition:enter-end="opacity-100"
                  x-transition:leave="transition ease-in duration-150"
                  x-transition:leave-start="opacity-100"
                  x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 overflow-hidden" x-cloak>
-                
+                 class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 overflow-y-auto" x-cloak>
+
                 <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-[#E1E8E2] my-auto" @click.away="openEditModal = false">
                     <div class="pb-3 border-b border-[#E1E8E2] mb-4">
                         <h3 class="text-base font-bold text-[#202B25]">Edit User</h3>
                     </div>
-                    
+
                     <form :action="'/admin/users/' + editData.id" method="POST" class="space-y-3">
                         @csrf
                         @method('PUT')
@@ -276,12 +297,21 @@
                             </select>
                         </div>
                         <div>
+                            <label class="block text-xs font-semibold text-[#68756D] mb-1">Cabang Penempatan</label>
+                            <select name="branch_id" x-model="editData.branch_id" class="w-full px-3 py-2 border border-[#E1E8E2] rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#176B45] focus:border-transparent">
+                                <option value="">Semua Cabang (Pusat / Lintas Cabang)</option>
+                                @foreach($branches as $branch)
+                                    <option value="{{ $branch->id }}">{{ $branch->code }} - {{ $branch->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
                             <label class="block text-xs font-semibold text-[#68756D] mb-1">Gaji Pokok (Rp)</label>
-                            <input type="text" 
-                                   x-model="editSalaryDisplay" 
-                                   @input="onSalaryInput('edit', $event.target.value)" 
-                                   placeholder="Contoh: 5.000.000" 
-                                   required 
+                            <input type="text"
+                                   x-model="editSalaryDisplay"
+                                   @input="onSalaryInput('edit', $event.target.value)"
+                                   placeholder="Contoh: 5.000.000"
+                                   required
                                    class="w-full px-3 py-2 border border-[#E1E8E2] rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#176B45] focus:border-transparent">
                             <input type="hidden" name="base_salary" :value="editSalaryRaw">
                         </div>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
@@ -25,7 +26,9 @@ class AuthController extends Controller
 
     public function showRegisterForm()
     {
-        return view('auth.register');
+        $branches = Branch::where('is_active', true)->orderBy('name')->get();
+
+        return view('auth.register', compact('branches'));
     }
 
     public function loginWeb(LoginRequest $request)
@@ -36,7 +39,7 @@ class AuthController extends Controller
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $user = Auth::user();
 
-            // Cek apakah status akun aktif (blokir jika non-aktif)
+            // 1. Cek status akun aktif
             if (! $user->is_active) {
                 Auth::logout();
                 $request->session()->invalidate();
@@ -46,19 +49,40 @@ class AuthController extends Controller
                     'email' => ['Akun Anda telah dinonaktifkan oleh Administrator.'],
                 ]);
             }
-            
-            // Cek apakah user memiliki role Spatie yang dipilih
-            if (!empty($selectedRole) && !$user->hasRole($selectedRole)) {
+
+            // 2. Blokir total jika email belum diverifikasi
+            if (! $user->hasVerifiedEmail()) {
+                $user->sendEmailVerificationNotification();
+
                 Auth::logout();
                 $request->session()->invalidate();
-                
+                $request->session()->regenerateToken();
+
+                throw ValidationException::withMessages([
+                    'email' => ['Email Anda belum diverifikasi. Link verifikasi baru telah dikirim ke email Anda, silakan klik link tersebut sebelum login.'],
+                ]);
+            }
+
+            // 3. Cek apakah user memiliki role Spatie yang dipilih
+            if (! empty($selectedRole) && ! $user->hasRole($selectedRole)) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
                 throw ValidationException::withMessages([
                     'role' => ['Akun Anda tidak memiliki hak akses sebagai ' . ucfirst($selectedRole) . '.'],
                 ]);
             }
 
+            // 4. Sinkronkan cabang aktif otomatis dari profil user
+            if ($user->branch_id) {
+                session(['active_branch_id' => $user->branch_id]);
+            } else {
+                session()->forget('active_branch_id');
+            }
+
             // Simpan role aktif di session
-            if (!empty($selectedRole)) {
+            if (! empty($selectedRole)) {
                 session(['active_role' => $selectedRole]);
             } else {
                 session(['active_role' => $user->getRoleNames()->first() ?? $user->role]);
@@ -66,10 +90,7 @@ class AuthController extends Controller
 
             $request->session()->regenerate();
 
-            // Pemicu event pendaftaran internal menggunakan helper event() bawaan
-            event(new Registered($user));
-
-            return redirect()->route('dashboard')->with('success', 'Selamat datang kembali!');
+            return redirect()->intended(route('dashboard'))->with('success', 'Selamat datang kembali!');
         }
 
         throw ValidationException::withMessages([
@@ -82,6 +103,7 @@ class AuthController extends Controller
         $user = User::create([
             'name'        => $request->name,
             'email'       => $request->email,
+            'branch_id'   => $request->branch_id ?: null,
             'password'    => Hash::make($request->password),
             'role'        => self::REGISTRATION_ROLE,
             'base_salary' => self::REGISTRATION_BASE_SALARY,
@@ -90,14 +112,11 @@ class AuthController extends Controller
 
         $user->assignRole(self::REGISTRATION_ROLE);
 
-        // Menggunakan helper event() standar (bukan broadcast())
+        // Kirim email verifikasi tanpa membuat sesi login
         event(new Registered($user));
 
-        Auth::login($user);
-        $request->session()->regenerate();
-
-        return redirect()->route('verification.notice')
-            ->with('success', 'Registrasi berhasil! Silakan cek email Anda untuk verifikasi akun.');
+        return redirect()->route('login')
+            ->with('status', 'Registrasi berhasil! Silakan buka email Anda dan klik link verifikasi sebelum login.');
     }
 
     public function logoutWeb(Request $request)
@@ -116,8 +135,12 @@ class AuthController extends Controller
 
         $user = User::where('email', $validated['email'])->first();
 
-        if (!$user || !Hash::check($validated['password'], $user->password)) {
+        if (! $user || ! Hash::check($validated['password'], $user->password)) {
             return response()->json(['message' => 'Email atau password salah'], 401);
+        }
+
+        if (! $user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Email belum diverifikasi.'], 403);
         }
 
         $user->tokens()->delete();
@@ -130,6 +153,7 @@ class AuthController extends Controller
                 'id'          => $user->id,
                 'name'        => $user->name,
                 'email'       => $user->email,
+                'branch_id'   => $user->branch_id,
                 'role'        => $user->getRoleNames()->first() ?? $user->role,
                 'permissions' => $user->getAllPermissions()->pluck('name'),
             ]
@@ -141,6 +165,7 @@ class AuthController extends Controller
         $user = User::create([
             'name'        => $request->name,
             'email'       => $request->email,
+            'branch_id'   => $request->branch_id ?: null,
             'password'    => Hash::make($request->password),
             'role'        => self::REGISTRATION_ROLE,
             'base_salary' => self::REGISTRATION_BASE_SALARY,
