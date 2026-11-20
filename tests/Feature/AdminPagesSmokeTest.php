@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ChartOfAccount;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -13,7 +13,7 @@ use Tests\TestCase;
 
 class AdminPagesSmokeTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     private User $admin;
     private User $staff;
@@ -51,112 +51,132 @@ class AdminPagesSmokeTest extends TestCase
         }
 
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $adminRole->syncPermissions($allPermissions);
+        $adminRole->givePermissionTo($allPermissions);
 
         $staffRole = Role::firstOrCreate(['name' => 'staff']);
-        $staffRole->syncPermissions(['view-dashboard']);
+        $staffRole->givePermissionTo(['view-dashboard']);
 
         $this->admin = User::factory()->create([
             'is_active'         => true,
             'email_verified_at' => now(),
         ]);
-        $this->admin->assignRole($adminRole);
+        $this->admin->assignSystemRole('admin');
 
         $this->staff = User::factory()->create([
             'is_active'         => true,
             'email_verified_at' => now(),
         ]);
-        $this->staff->assignRole($staffRole);
+        $this->staff->assignSystemRole('staff');
 
         $this->seedMinimalChartOfAccounts();
     }
 
     private function seedMinimalChartOfAccounts(): void
     {
-        $assets = ChartOfAccount::create([
-            'code'           => '1-1000',
-            'name'           => 'Aset Lancar',
-            'type'           => 'asset',
-            'normal_balance' => 'debit',
-            'is_active'      => true,
-        ]);
+        $assets = ChartOfAccount::firstOrCreate(
+            ['code' => '1-1000'],
+            [
+                'name'           => 'Aset Lancar',
+                'type'           => 'asset',
+                'normal_balance' => 'debit',
+                'is_active'      => true,
+            ]
+        );
 
-        ChartOfAccount::create([
-            'code'           => '1-1110',
-            'name'           => 'Kas Utama',
-            'type'           => 'asset',
-            'normal_balance' => 'debit',
-            'parent_id'      => $assets->id,
-            'is_active'      => true,
-        ]);
+        ChartOfAccount::firstOrCreate(
+            ['code' => '1-1110'],
+            [
+                'name'           => 'Kas Utama',
+                'type'           => 'asset',
+                'normal_balance' => 'debit',
+                'parent_id'      => $assets->id,
+                'is_active'      => true,
+            ]
+        );
 
-        $liabilities = ChartOfAccount::create([
-            'code'           => '2-1000',
-            'name'           => 'Liabilitas Jangka Pendek',
-            'type'           => 'liability',
-            'normal_balance' => 'credit',
-            'is_active'      => true,
-        ]);
+        $liabilities = ChartOfAccount::firstOrCreate(
+            ['code' => '2-1000'],
+            [
+                'name'           => 'Liabilitas Jangka Pendek',
+                'type'           => 'liability',
+                'normal_balance' => 'credit',
+                'is_active'      => true,
+            ]
+        );
 
-        ChartOfAccount::create([
-            'code'           => '2-1100',
-            'name'           => 'Utang Usaha',
-            'type'           => 'liability',
-            'normal_balance' => 'credit',
-            'parent_id'      => $liabilities->id,
-            'is_active'      => true,
-        ]);
+        ChartOfAccount::firstOrCreate(
+            ['code' => '2-1100'],
+            [
+                'name'           => 'Utang Usaha',
+                'type'           => 'liability',
+                'normal_balance' => 'credit',
+                'parent_id'      => $liabilities->id,
+                'is_active'      => true,
+            ]
+        );
 
-        $equity = ChartOfAccount::create([
-            'code'           => '3-1000',
-            'name'           => 'Ekuitas',
-            'type'           => 'equity',
-            'normal_balance' => 'credit',
-            'is_active'      => true,
-        ]);
+        $equity = ChartOfAccount::firstOrCreate(
+            ['code' => '3-1000'],
+            [
+                'name'           => 'Ekuitas',
+                'type'           => 'equity',
+                'normal_balance' => 'credit',
+                'is_active'      => true,
+            ]
+        );
 
-        ChartOfAccount::create([
-            'code'           => '3-1200',
-            'name'           => 'Laba Ditahan',
-            'type'           => 'equity',
-            'normal_balance' => 'credit',
-            'parent_id'      => $equity->id,
-            'is_active'      => true,
-        ]);
+        ChartOfAccount::firstOrCreate(
+            ['code' => '3-1200'],
+            [
+                'name'           => 'Laba Ditahan',
+                'type'           => 'equity',
+                'normal_balance' => 'credit',
+                'parent_id'      => $equity->id,
+                'is_active'      => true,
+            ]
+        );
 
-        $revenue = ChartOfAccount::create([
-            'code'           => '4-1000',
-            'name'           => 'Pendapatan',
-            'type'           => 'revenue',
-            'normal_balance' => 'credit',
-            'is_active'      => true,
-        ]);
+        $revenue = ChartOfAccount::firstOrCreate(
+            ['code' => '4-1000'],
+            [
+                'name'           => 'Pendapatan',
+                'type'           => 'revenue',
+                'normal_balance' => 'credit',
+                'is_active'      => true,
+            ]
+        );
 
-        ChartOfAccount::create([
-            'code'           => '4-1100',
-            'name'           => 'Pendapatan Jasa',
-            'type'           => 'revenue',
-            'normal_balance' => 'credit',
-            'parent_id'      => $revenue->id,
-            'is_active'      => true,
-        ]);
+        ChartOfAccount::firstOrCreate(
+            ['code' => '4-1100'],
+            [
+                'name'           => 'Pendapatan Jasa',
+                'type'           => 'revenue',
+                'normal_balance' => 'credit',
+                'parent_id'      => $revenue->id,
+                'is_active'      => true,
+            ]
+        );
 
-        $expense = ChartOfAccount::create([
-            'code'           => '5-1000',
-            'name'           => 'Beban Operasional',
-            'type'           => 'expense',
-            'normal_balance' => 'debit',
-            'is_active'      => true,
-        ]);
+        $expense = ChartOfAccount::firstOrCreate(
+            ['code' => '5-1000'],
+            [
+                'name'           => 'Beban Operasional',
+                'type'           => 'expense',
+                'normal_balance' => 'debit',
+                'is_active'      => true,
+            ]
+        );
 
-        ChartOfAccount::create([
-            'code'           => '5-1100',
-            'name'           => 'Beban Gaji',
-            'type'           => 'expense',
-            'normal_balance' => 'debit',
-            'parent_id'      => $expense->id,
-            'is_active'      => true,
-        ]);
+        ChartOfAccount::firstOrCreate(
+            ['code' => '5-1100'],
+            [
+                'name'           => 'Beban Gaji',
+                'type'           => 'expense',
+                'normal_balance' => 'debit',
+                'parent_id'      => $expense->id,
+                'is_active'      => true,
+            ]
+        );
     }
 
     public static function adminPagesProvider(): array

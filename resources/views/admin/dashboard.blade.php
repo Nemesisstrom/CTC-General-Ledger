@@ -4,27 +4,57 @@
 
 @section('content')
     <div class="feature-page mx-auto min-w-0 max-w-7xl space-y-6 overflow-x-hidden p-3 sm:space-y-8 sm:p-6 lg:p-8">
-        
+
         {{-- Banner Header --}}
         <section class="dashboard-enter relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-[#104B35] via-[#176B45] to-[#248052] px-4 py-6 text-white shadow-lg shadow-[#104B35]/10 sm:px-8 sm:py-9">
             <div class="pointer-events-none absolute -right-12 -top-24 -z-10 h-72 w-72 rounded-full border border-white/10"></div>
             <div class="pointer-events-none absolute -right-2 -top-14 -z-10 h-52 w-52 rounded-full border border-white/10"></div>
-            <div class="max-w-2xl">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#C6E4D0]">CTC General Ledger</p>
-                <div class="mt-3 text-xl font-bold tracking-tight text-white sm:text-3xl" role="heading" aria-level="1">
-                    Ringkasan Keuangan
+            <div class="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+                <div class="max-w-2xl">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#C6E4D0]">CTC General Ledger</p>
+                    <div class="mt-3 text-xl font-bold tracking-tight text-white sm:text-3xl" role="heading" aria-level="1">
+                        Ringkasan Keuangan
+                    </div>
+                    <p class="mt-2 text-sm leading-6 text-[#E8F4EC] sm:text-base">
+                        Ikhtisar arus kas, hasil usaha, dan aktivitas keuangan periode
+                        <span class="font-semibold text-white">
+                            {{ \Carbon\Carbon::createFromDate($selectedYear ?? now()->year, $selectedMonth ?? now()->month, 1)->translatedFormat('F Y') }}
+                        </span>.
+                    </p>
                 </div>
-                <p class="mt-2 text-sm leading-6 text-[#E8F4EC] sm:text-base">
-                    Ikhtisar arus kas, hasil usaha, dan aktivitas keuangan terbaru.
-                </p>
+
+                {{-- Filter Periode Bulan & Tahun --}}
+                <form method="GET" action="{{ route('dashboard') }}" class="flex flex-wrap items-center gap-2">
+                    <select name="month" aria-label="Pilih Bulan" class="rounded-xl border border-white/20 bg-white/15 px-3 py-2 text-xs font-semibold text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/50 sm:text-sm">
+                        @foreach(range(1, 12) as $m)
+                            <option value="{{ $m }}" class="text-gray-900" @selected(($selectedMonth ?? now()->month) == $m)>
+                                {{ \Carbon\Carbon::create()->month($m)->translatedFormat('F') }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    <select name="year" aria-label="Pilih Tahun" class="rounded-xl border border-white/20 bg-white/15 px-3 py-2 text-xs font-semibold text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/50 sm:text-sm">
+                        @foreach(($availableYears ?? [now()->year]) as $y)
+                            <option value="{{ $y }}" class="text-gray-900" @selected(($selectedYear ?? now()->year) == $y)>
+                                {{ $y }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    <button type="submit" class="rounded-xl bg-white px-4 py-2 text-xs font-bold text-[#104B35] shadow-sm transition hover:bg-[#E8F4EC] sm:text-sm">
+                        Tampilkan
+                    </button>
+                </form>
             </div>
         </section>
 
-        {{-- Section Ringkasan Keuangan (Kartu Nominal UI/UX Refined) --}}
+        {{-- Section Ringkasan Keuangan --}}
         <section aria-labelledby="financial-summary-heading" class="dashboard-enter space-y-4" style="animation-delay: 70ms">
             <div>
                 <h2 id="financial-summary-heading" class="text-lg font-bold tracking-tight text-[#202B25] dark:text-gray-100">Ikhtisar Keuangan</h2>
-                <p class="mt-1 text-sm text-[#68756D] dark:text-gray-400">Ringkasan berdasarkan data keuangan yang tersedia.</p>
+                <p class="mt-1 text-sm text-[#68756D] dark:text-gray-400">
+                    Ringkasan transaksi pada periode {{ \Carbon\Carbon::createFromDate($selectedYear ?? now()->year, $selectedMonth ?? now()->month, 1)->translatedFormat('F Y') }}.
+                </p>
             </div>
 
             <div class="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
@@ -38,7 +68,7 @@
                     </div>
                     <div class="mt-3 min-w-0 overflow-hidden">
                         <p class="whitespace-nowrap tabular-nums text-lg font-bold tracking-tight text-[#176B45] dark:text-emerald-400 sm:text-xl lg:text-2xl">
-                            Rp {{ number_format($data['kas_masuk'] ?? $totalInflow ?? 0, 0, ',', '.') }}
+                            Rp {{ number_format($data['kas_masuk'] ?? 0, 0, ',', '.') }}
                         </p>
                     </div>
                 </article>
@@ -53,14 +83,14 @@
                     </div>
                     <div class="mt-3 min-w-0 overflow-hidden">
                         <p class="whitespace-nowrap tabular-nums text-lg font-bold tracking-tight text-red-600 dark:text-red-400 sm:text-xl lg:text-2xl">
-                            Rp {{ number_format($data['kas_keluar'] ?? $totalOutflow ?? 0, 0, ',', '.') }}
+                            Rp {{ number_format($data['kas_keluar'] ?? 0, 0, ',', '.') }}
                         </p>
                     </div>
                 </article>
 
                 {{-- Laba / Rugi Bersih --}}
                 @php
-                    $netVal = $data['laba_rugi_bersih'] ?? (($totalInflow ?? 0) - ($totalOutflow ?? 0));
+                    $netVal = $data['laba_rugi_bersih'] ?? 0;
                 @endphp
                 <article class="group min-w-0 rounded-2xl border border-[#E1E8E2] dark:border-gray-700 border-t-4 {{ $netVal >= 0 ? 'border-t-[#176B45]' : 'border-t-red-500' }} bg-white dark:bg-gray-800 p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5">
                     <div class="flex items-center justify-between gap-2">
@@ -86,14 +116,14 @@
                     </div>
                     <div class="mt-3 min-w-0 overflow-hidden">
                         <p class="whitespace-nowrap tabular-nums text-lg font-bold tracking-tight text-[#104B35] dark:text-emerald-400 sm:text-xl lg:text-2xl">
-                            Rp {{ number_format($data['gaji_bulan_ini'] ?? $payrollTotal ?? 0, 0, ',', '.') }}
+                            Rp {{ number_format($data['gaji_bulan_ini'] ?? 0, 0, ',', '.') }}
                         </p>
                     </div>
                 </article>
             </div>
         </section>
 
-        {{-- Seksi Grafik Visual (Fitur dari Main) --}}
+        {{-- Seksi Grafik Visual --}}
         <section aria-labelledby="visual-charts-heading" class="dashboard-enter space-y-4" style="animation-delay: 100ms">
             <div>
                 <h2 id="visual-charts-heading" class="text-lg font-bold tracking-tight text-[#202B25] dark:text-gray-100">Visualisasi & Analisis Grafik</h2>
@@ -101,7 +131,6 @@
             </div>
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <!-- Grafik Line: Tren Arus Kas -->
                 <div class="lg:col-span-2 rounded-2xl border border-[#E1E8E2] dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm transition sm:p-6">
                     <div class="mb-4 flex items-center justify-between">
                         <h3 class="text-sm font-bold text-[#202B25] dark:text-gray-100">Tren Arus Kas (Kas Masuk vs Kas Keluar)</h3>
@@ -112,11 +141,10 @@
                     </div>
                 </div>
 
-                <!-- Grafik Doughnut: Perbandingan Kas -->
                 <div class="rounded-2xl border border-[#E1E8E2] dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm transition sm:p-6">
                     <div class="mb-4">
                         <h3 class="text-sm font-bold text-[#202B25] dark:text-gray-100">Perbandingan Kas Masuk & Keluar</h3>
-                        <p class="text-xs text-[#68756D] dark:text-gray-400">Proporsi alokasi dana</p>
+                        <p class="text-xs text-[#68756D] dark:text-gray-400">Proporsi alokasi dana periode terpilih</p>
                     </div>
                     <div class="relative flex h-64 items-center justify-center">
                         <canvas id="cashDoughnutChart"></canvas>
@@ -129,7 +157,7 @@
         <section aria-labelledby="recent-activity-heading" class="dashboard-enter space-y-4" style="animation-delay: 140ms">
             <div>
                 <h2 id="recent-activity-heading" class="text-lg font-bold tracking-tight text-[#202B25] dark:text-gray-100">Aktivitas Terbaru</h2>
-                <p class="mt-1 text-sm text-[#68756D] dark:text-gray-400">Transaksi kas dan jurnal pembalikan yang tercatat.</p>
+                <p class="mt-1 text-sm text-[#68756D] dark:text-gray-400">Transaksi kas dan jurnal pembalikan pada periode terpilih.</p>
             </div>
 
             <div class="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-2">
@@ -183,7 +211,7 @@
                                 @empty
                                     <tr>
                                         <td colspan="4" class="px-6 py-12 text-center">
-                                            <p class="text-sm font-medium text-[#202B25] dark:text-gray-200">Belum ada transaksi kas</p>
+                                            <p class="text-sm font-medium text-[#202B25] dark:text-gray-200">Belum ada transaksi kas pada periode ini</p>
                                             <p class="mt-1 text-xs text-[#68756D] dark:text-gray-400">Transaksi terbaru akan muncul di sini.</p>
                                         </td>
                                     </tr>
@@ -228,7 +256,7 @@
                             </article>
                         @empty
                             <div class="rounded-xl border border-dashed border-[#E1E8E2] dark:border-gray-700 px-5 py-12 text-center">
-                                <p class="text-sm font-medium text-[#202B25] dark:text-gray-200">Belum ada aktivitas pembalikan jurnal</p>
+                                <p class="text-sm font-medium text-[#202B25] dark:text-gray-200">Belum ada aktivitas pembalikan jurnal pada periode ini</p>
                                 <p class="mt-1 text-xs text-[#68756D] dark:text-gray-400">Jurnal pembalikan terbaru akan muncul di sini.</p>
                             </div>
                         @endforelse
@@ -250,10 +278,9 @@
         const monthlyLabels = JSON.parse('{!! json_encode($monthlyLabels ?? ["Jun", "Jul", "Agt", "Sep", "Okt", "Nov"]) !!}');
         const incomeData = JSON.parse('{!! json_encode($incomeData ?? [0, 0, 0, 0, 0, 0]) !!}');
         const expenseData = JSON.parse('{!! json_encode($expenseData ?? [0, 0, 0, 0, 0, 0]) !!}');
-        const totalInflow = Number('{{ $data["kas_masuk"] ?? $totalInflow ?? 0 }}');
-        const totalOutflow = Number('{{ $data["kas_keluar"] ?? $totalOutflow ?? 0 }}');
+        const totalInflow = Number('{{ $data["kas_masuk"] ?? 0 }}');
+        const totalOutflow = Number('{{ $data["kas_keluar"] ?? 0 }}');
 
-        // 1. Line Chart Arus Kas
         const elLine = document.getElementById('cashFlowLineChart');
         if (elLine) {
             new Chart(elLine.getContext('2d'), {
@@ -303,7 +330,6 @@
             });
         }
 
-        // 2. Doughnut Chart Kas Masuk vs Keluar
         const elDoughnut = document.getElementById('cashDoughnutChart');
         if (elDoughnut) {
             new Chart(elDoughnut.getContext('2d'), {

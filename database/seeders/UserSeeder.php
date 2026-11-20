@@ -9,7 +9,6 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Administrator Keuangan
         $admin = User::updateOrCreate(
             ['email' => 'admin@keuangan.com'],
             [
@@ -19,12 +18,12 @@ class UserSeeder extends Seeder
             ]
         );
         $admin->forceFill([
-            'is_active'   => true,
-            'base_salary' => 5000000,
+            'is_active'         => true,
+            'base_salary'       => 5000000,
+            'email_verified_at' => now(),
         ])->save();
         $admin->assignSystemRole('admin');
 
-        // 2. Staff Akuntansi
         $akuntan = User::updateOrCreate(
             ['email' => 'akuntan@keuangan.com'],
             [
@@ -34,12 +33,12 @@ class UserSeeder extends Seeder
             ]
         );
         $akuntan->forceFill([
-            'is_active'   => true,
-            'base_salary' => 4000000,
+            'is_active'         => true,
+            'base_salary'       => 4000000,
+            'email_verified_at' => now(),
         ])->save();
         $akuntan->assignSystemRole('akuntan');
 
-        // 3. Staff Operasional
         $staff = User::updateOrCreate(
             ['email' => 'staff@keuangan.com'],
             [
@@ -49,8 +48,9 @@ class UserSeeder extends Seeder
             ]
         );
         $staff->forceFill([
-            'is_active'   => true,
-            'base_salary' => 5000000,
+            'is_active'         => true,
+            'base_salary'       => 5000000,
+            'email_verified_at' => now(),
         ])->save();
         $staff->assignSystemRole('staff');
     }

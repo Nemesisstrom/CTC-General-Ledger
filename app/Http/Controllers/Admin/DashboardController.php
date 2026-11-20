@@ -4,78 +4,123 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CashTransaction;
-use App\Models\ChartOfAccount;
 use App\Models\Journal;
-use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use App\Models\Payroll;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request): View
     {
-        $totalUsers = User::count();
-        $totalCOA = ChartOfAccount::count();
-        $totalJournals = Journal::count();
+        $selectedMonth = (int) $request->input('month', now()->month);
+        $selectedYear  = (int) $request->input('year', now()->year);
 
-        // Ringkasan Kas
-        $totalInflow = CashTransaction::where('type', 'in')->sum('amount');
-        $totalOutflow = CashTransaction::where('type', 'out')->sum('amount');
-        $cashBalance = $totalInflow - $totalOutflow;
+        $startOfMonth = Carbon::createFromDate($selectedYear, $selectedMonth, 1)->startOfMonth();
+        $endOfMonth   = $startOfMonth->copy()->endOfMonth();
 
-        // Data Grafik: Tren Pendapatan & Beban 6 Bulan Terakhir
-        $monthlyLabels = [];
-        $incomeData = [];
-        $expenseData = [];
+        // 1. Kartu Ringkasan (Dihitung terpisah khusus bulan & tahun terpilih)
+        $kasMasuk = (float) CashTransaction::where('type', 'in')
+            ->whereBetween('transaction_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+            ->sum('amount');
 
-        for ($i = 5; $i >= 0; $i--) {
-            $month = now()->subMonths($i);
-            $monthlyLabels[] = $month->translatedFormat('M Y');
+        $kasKeluar = (float) CashTransaction::where('type', 'out')
+            ->whereBetween('transaction_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+            ->sum('amount');
 
-            $in = CashTransaction::where('type', 'in')
-                ->whereYear('transaction_date', $month->year)
-                ->whereMonth('transaction_date', $month->month)
-                ->sum('amount');
+        $labaRugiBersih = $kasMasuk - $kasKeluar;
 
-            $out = CashTransaction::where('type', 'out')
-                ->whereYear('transaction_date', $month->year)
-                ->whereMonth('transaction_date', $month->month)
-                ->sum('amount');
+        // Penyesuaian otomatis nama kolom tanggal & nominal pada tabel payrolls
+        $payrollQuery = Payroll::query();
+        $payrollAmountCol = Schema::hasColumn('payrolls', 'net_salary')
+            ? 'net_salary'
+            : (Schema::hasColumn('payrolls', 'total_amount') ? 'total_amount' : 'amount');
 
-            $incomeData[] = (float) $in;
-            $expenseData[] = (float) $out;
+        if (Schema::hasColumn('payrolls', 'payment_date')) {
+            $payrollQuery->whereBetween('payment_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()]);
+        } elseif (Schema::hasColumn('payrolls', 'payroll_date')) {
+            $payrollQuery->whereBetween('payroll_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()]);
+        } elseif (Schema::hasColumn('payrolls', 'month') && Schema::hasColumn('payrolls', 'year')) {
+            $payrollQuery->where('month', $selectedMonth)->where('year', $selectedYear);
+        } elseif (Schema::hasColumn('payrolls', 'period')) {
+            $payrollQuery->where('period', $startOfMonth->format('Y-m'));
+        } else {
+            $payrollQuery->whereBetween('created_at', [$startOfMonth->startOfDay(), $endOfMonth->endOfDay()]);
         }
 
-        // Data Grafik: Saldo Akun Kas & Bank
-        $cashAccounts = ChartOfAccount::whereIn('type', ['asset', 'kas'])
-            ->where(function ($query) {
-                $query->where('name', 'LIKE', '%kas%')
-                    ->orWhere('name', 'LIKE', '%bank%');
-            })
+        $gajiBulanIni = (float) $payrollQuery->sum($payrollAmountCol);
+
+        // 2. Aktivitas Terbaru (Difilter pada bulan terpilih)
+        $transaksiTerakhir = CashTransaction::whereBetween('transaction_date', [
+                $startOfMonth->toDateString(),
+                $endOfMonth->toDateString(),
+            ])
+            ->orderByDesc('transaction_date')
+            ->orderByDesc('id')
+            ->limit(5)
             ->get();
 
-        $accountNames = [];
-        $accountBalances = [];
+        $pembalikanTerakhir = Journal::where('journal_number', 'like', 'REV-%')
+            ->whereBetween('journal_date', [
+                $startOfMonth->toDateString(),
+                $endOfMonth->toDateString(),
+            ])
+            ->orderByDesc('journal_date')
+            ->orderByDesc('id')
+            ->limit(5)
+            ->get();
 
-        foreach ($cashAccounts as $account) {
-            $accountNames[] = $account->name;
-            // Menghitung estimasi saldo akun kas/bank
-            $debit = DB::table('journal_details')->where('account_id', $account->id)->sum('debit');
-            $credit = DB::table('journal_details')->where('account_id', $account->id)->sum('credit');
-            $accountBalances[] = (float) ($debit - $credit);
+        // 3. Data Grafik 6 Bulan Terakhir (mundur dari bulan yang dipilih)
+        $monthlyLabels = [];
+        $incomeData    = [];
+        $expenseData   = [];
+
+        for ($i = 5; $i >= 0; $i--) {
+            $cursor = $startOfMonth->copy()->subMonths($i);
+            $monthlyLabels[] = $cursor->translatedFormat('M Y');
+
+            $incomeData[] = (float) CashTransaction::where('type', 'in')
+                ->whereYear('transaction_date', $cursor->year)
+                ->whereMonth('transaction_date', $cursor->month)
+                ->sum('amount');
+
+            $expenseData[] = (float) CashTransaction::where('type', 'out')
+                ->whereYear('transaction_date', $cursor->year)
+                ->whereMonth('transaction_date', $cursor->month)
+                ->sum('amount');
         }
 
+        // Daftar tahun tersedia (kompatibel untuk MySQL & SQLite)
+        $availableYears = CashTransaction::pluck('transaction_date')
+            ->filter()
+            ->map(fn ($date) => Carbon::parse($date)->year)
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        if ($availableYears->isEmpty()) {
+            $availableYears = collect([now()->year]);
+        }
+
+        $data = [
+            'kas_masuk'           => $kasMasuk,
+            'kas_keluar'          => $kasKeluar,
+            'laba_rugi_bersih'    => $labaRugiBersih,
+            'gaji_bulan_ini'      => $gajiBulanIni,
+            'transaksi_terakhir'  => $transaksiTerakhir,
+            'pembalikan_terakhir' => $pembalikanTerakhir,
+        ];
+
         return view('admin.dashboard', compact(
-            'totalUsers',
-            'totalCOA',
-            'totalJournals',
-            'cashBalance',
-            'totalInflow',
-            'totalOutflow',
+            'data',
+            'selectedMonth',
+            'selectedYear',
+            'availableYears',
             'monthlyLabels',
             'incomeData',
-            'expenseData',
-            'accountNames',
-            'accountBalances'
+            'expenseData'
         ));
     }
 }
