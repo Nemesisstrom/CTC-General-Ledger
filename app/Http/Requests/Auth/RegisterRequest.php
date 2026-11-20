@@ -3,13 +3,9 @@
 namespace App\Http\Requests\Auth;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\Password;
 
-/**
- * @property-read string $name
- * @property-read string $email
- * @property-read string $password
- * @property-read int|null $branch_id
- */
 class RegisterRequest extends FormRequest
 {
     public function authorize(): bool
@@ -17,30 +13,40 @@ class RegisterRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('email') && is_string($this->email)) {
+            $this->merge([
+                'email' => strtolower(trim($this->email)),
+            ]);
+        }
+    }
+
     public function rules(): array
     {
+        Validator::extendImplicit(
+            'forbidden_client_field',
+            function (string $attribute, mixed $value, array $parameters, \Illuminate\Validation\Validator $validator): bool {
+                return !array_key_exists($attribute, $validator->getData());
+            },
+            'Field tidak dapat ditentukan saat registrasi.'
+        );
+
         return [
             'name'        => ['required', 'string', 'max:255'],
             'email'       => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'branch_id'   => ['nullable', 'exists:branches,id'],
-            'password'    => ['required', 'string', 'min:8', 'confirmed'],
-            // Mencegah client menyuntikkan role atau base_salary saat registrasi
-            'role'        => ['prohibited'],
-            'base_salary' => ['missing'],
+            'password'    => ['required', 'confirmed', Password::defaults()],
+            'role'        => ['forbidden_client_field'],
+            'base_salary' => ['forbidden_client_field'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'name.required'       => 'Nama lengkap wajib diisi.',
-            'email.required'      => 'Email wajib diisi.',
-            'email.unique'        => 'Email sudah terdaftar.',
-            'password.required'   => 'Password wajib diisi.',
-            'password.min'        => 'Password minimal 8 karakter.',
-            'password.confirmed'  => 'Konfirmasi password tidak cocok.',
-            'role.prohibited'     => 'Role pengguna ditentukan oleh sistem.',
-            'base_salary.missing' => 'Gaji pokok ditentukan oleh sistem.',
+            'email.unique'                       => 'Alamat email ini sudah terdaftar. Silakan langsung login atau gunakan fitur lupa password.',
+            'role.forbidden_client_field'        => 'Hak akses (role) tidak dapat ditentukan saat registrasi.',
+            'base_salary.forbidden_client_field' => 'Gaji pokok tidak dapat ditentukan saat registrasi.',
         ];
     }
 }
