@@ -51,17 +51,22 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->prefix('v1')->name('api.v1
 
     // Profile & Logout API
     Route::post('/logout', [AuthController::class, 'logoutApi'])->name('logout');
-    Route::get('/me', fn (Request $request) => response()->json(['user' => $request->user()]))->name('me');
+    Route::get('/me', function (Request $request) {
+        if (!$request->user()?->is_active) {
+            return response()->json(['message' => 'Akun tidak aktif.'], 403);
+        }
+
+        return response()->json(['user' => $request->user()]);
+    })->name('me');
 
     // Dashboard JSON Endpoint (Role: Admin, Akuntan, & Staff)
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->middleware('role:admin|akuntan|staff')
         ->name('dashboard');
 
-    // Khusus Role Admin (Master Data, Tutup Buku, & Hard Delete)
+    // Khusus Role Admin (User Management, Tutup Buku, & Hard Delete)
     Route::middleware('role:admin')->group(function () {
         Route::apiResource('users', UserController::class)->except(['show']);
-        Route::apiResource('chart-of-accounts', ChartOfAccountController::class)->except(['show']);
 
         // Tutup Buku Akhir Tahun via API
         Route::post('/closing-year-end', [ClosingController::class, 'store'])->name('closing.year-end');
@@ -71,6 +76,11 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->prefix('v1')->name('api.v1
         Route::delete('/bank-reconciliations/{id}', [BankReconciliationController::class, 'destroy'])->name('bank-reconciliations.destroy');
         Route::delete('/payrolls/{id}', [PayrollController::class, 'destroy'])->name('payrolls.destroy');
         Route::delete('/adjustments/{id}', [AdjustmentController::class, 'destroy'])->name('adjustments.destroy');
+    });
+
+    // Chart of Accounts (Admin & Akuntan via Permission)
+    Route::middleware('permission:manage-chart-of-accounts')->group(function () {
+        Route::apiResource('chart-of-accounts', ChartOfAccountController::class)->except(['show']);
     });
 
     // Reports API Group

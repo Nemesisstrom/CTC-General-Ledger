@@ -11,10 +11,8 @@ class RolePermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        // Reset cached roles and permissions
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // 1. Buat Daftar Permission per Modul (Diselaraskan dengan Web & API Routes)
         $permissions = [
             // User & Master Data
             'manage-users',
@@ -43,11 +41,11 @@ class RolePermissionSeeder extends Seeder
             Permission::findOrCreate($permission, 'web');
         }
 
-        // 2. Buat Role Admin & Assign Semua Permission
+        // Admin: akses penuh seluruh sistem
         $adminRole = Role::findOrCreate('admin', 'web');
         $adminRole->syncPermissions(Permission::all());
 
-        // 3. Buat Role Akuntan & Assign Permission Spesifik
+        // Akuntan: siklus akuntansi, pajak, payroll, dan laporan
         $akuntanRole = Role::findOrCreate('akuntan', 'web');
         $akuntanRole->syncPermissions([
             'manage-chart-of-accounts',
@@ -65,11 +63,10 @@ class RolePermissionSeeder extends Seeder
             'view-reports-payroll',
         ]);
 
-        // 4. Buat Role Staff (Role Default Registrasi)
+        // Staff: hanya transaksi kas operasional harian
         $staffRole = Role::findOrCreate('staff', 'web');
         $staffRole->syncPermissions([
             'manage-cash-transactions',
-            'manage-payrolls',
         ]);
     }
 }

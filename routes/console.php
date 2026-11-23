@@ -13,3 +13,7 @@ Schedule::command('expenses:process-recurring')
     ->dailyAt('01:00')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/recurring-expenses.log'));
+
+// Bersihkan failed jobs lama setiap minggu agar tabel jobs tetap rapi
+Schedule::command('queue:prune-failed --hours=168')
+    ->weekly();
