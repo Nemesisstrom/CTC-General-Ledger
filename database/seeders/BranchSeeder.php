@@ -15,17 +15,17 @@ class BranchSeeder extends Seeder
             [
                 'name' => 'Kantor Pusat (Head Office)',
                 'phone' => '021-88990011',
-                'address' => 'Bekasi, Jawa Barat',
+                'address' => 'Depok, Jawa Barat, Indonesia',
                 'is_active' => true,
             ]
         );
 
         Branch::firstOrCreate(
-            ['code' => 'CBG-002'],
+            ['code' => 'CBG-001'],
             [
                 'name' => 'Cabang Jakarta',
                 'phone' => '021-55667788',
-                'address' => 'Jakarta Selatan',
+                'address' => 'Gedung Wisma Bisnis Indonesia 2, Jl Ir H Juanda III No 32, Jakarta Pusat',
                 'is_active' => true,
             ]
         );
