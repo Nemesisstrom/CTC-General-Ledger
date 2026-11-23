@@ -35,6 +35,7 @@ class RegisterRequest extends FormRequest
         return [
             'name'        => ['required', 'string', 'max:255'],
             'email'       => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'branch_id'   => ['required', 'integer', 'exists:branches,id'],
             'password'    => ['required', 'confirmed', Password::defaults()],
             'role'        => ['forbidden_client_field'],
             'base_salary' => ['forbidden_client_field'],
@@ -45,6 +46,8 @@ class RegisterRequest extends FormRequest
     {
         return [
             'email.unique'                       => 'Alamat email ini sudah terdaftar. Silakan langsung login atau gunakan fitur lupa password.',
+            'branch_id.required'                 => 'Silakan pilih cabang operasional terlebih dahulu.',
+            'branch_id.exists'                   => 'Cabang operasional yang dipilih tidak valid.',
             'role.forbidden_client_field'        => 'Hak akses (role) tidak dapat ditentukan saat registrasi.',
             'base_salary.forbidden_client_field' => 'Gaji pokok tidak dapat ditentukan saat registrasi.',
         ];

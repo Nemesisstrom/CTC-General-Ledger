@@ -24,7 +24,7 @@ class UserSeeder extends Seeder
         $admin->forceFill([
             'branch_id'         => $pusat?->id,
             'is_active'         => true,
-            'base_salary'       => 5000000,
+            'base_salary'       => 10000000,
             'email_verified_at' => now(),
         ])->save();
         $admin->assignSystemRole('admin');
@@ -41,7 +41,7 @@ class UserSeeder extends Seeder
         $akuntan->forceFill([
             'branch_id'         => $pusat?->id,
             'is_active'         => true,
-            'base_salary'       => 4000000,
+            'base_salary'       => 8000000,
             'email_verified_at' => now(),
         ])->save();
         $akuntan->assignSystemRole('akuntan');

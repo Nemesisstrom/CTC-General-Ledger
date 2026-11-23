@@ -62,13 +62,20 @@ class AuthController extends Controller
 
     public function showRegisterForm(): View
     {
-        return view('auth.register');
+        $branches = Branch::where('is_active', true)
+            ->orderBy('code')
+            ->get();
+
+        return view('auth.register', compact('branches'));
     }
 
     public function registerWeb(RegisterRequest $request): RedirectResponse
     {
         $user = DB::transaction(function () use ($request) {
-            $defaultBranch = Branch::where('is_active', true)->orderBy('id')->first();
+            $selectedBranch = Branch::where('is_active', true)
+                ->where('id', $request->input('branch_id'))
+                ->first()
+                ?? Branch::where('is_active', true)->orderBy('id')->first();
 
             $newUser = User::create([
                 'name'     => $request->input('name'),
@@ -77,7 +84,7 @@ class AuthController extends Controller
             ]);
 
             $newUser->forceFill([
-                'branch_id'   => $defaultBranch?->id,
+                'branch_id'   => $selectedBranch?->id,
                 'is_active'   => true,
                 'base_salary' => 0,
             ])->save();
