@@ -11,7 +11,7 @@ class BranchSeeder extends Seeder
     public function run(): void
     {
         $pusat = Branch::firstOrCreate(
-            ['code' => 'CBG-001'],
+            ['code' => 'CBG-000'],
             [
                 'name' => 'Kantor Pusat (Head Office)',
                 'phone' => '021-88990011',
